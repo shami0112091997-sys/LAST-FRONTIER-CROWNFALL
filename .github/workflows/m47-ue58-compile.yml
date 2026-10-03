@@ -1,7 +1,7 @@
 name: M47 - UE5.8 Compile
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: {}
 
 jobs:
   compile:
