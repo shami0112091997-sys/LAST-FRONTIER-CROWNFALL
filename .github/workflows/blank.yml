@@ -1,0 +1,31 @@
+
+name: LAST FRONTIER - Repository Check
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  inspect-project:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Show repository contents
+        run: |
+          echo "=== LAST FRONTIER: CROWNFALL ==="
+          echo "Checking repository contents..."
+          find . -maxdepth 3 -type f | sort
+
+      - name: Check for Unreal project
+        run: |
+          UPROJECT=$(find . -name "*.uproject" -print -quit)
+          if [ -n "$UPROJECT" ]; then
+            echo "UNREAL_PROJECT_FOUND=$UPROJECT"
+          else
+            echo "UNREAL_PROJECT_NOT_FOUND"
+            echo "The repository does not yet contain the Unreal project files."
+          fi
