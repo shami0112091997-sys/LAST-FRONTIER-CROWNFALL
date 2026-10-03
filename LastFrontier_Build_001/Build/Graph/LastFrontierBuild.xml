@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<BuildGraph xmlns="http://www.epicgames.com/BuildGraph">
+  <Option Name="Project" DefaultValue="$(RootDir)/LastFrontier.uproject" Description="LastFrontier uproject path." />
+  <Option Name="Platform" DefaultValue="Linux" Description="UE target platform." />
+  <Option Name="Configuration" DefaultValue="Development" Description="UE target configuration." />
+  <Option Name="ArchiveDir" DefaultValue="$(RootDir)/Packaged" Description="Stage output directory." />
+
+  <Node Name="LF_Validate">
+    <Log Message="Validate LastFrontier metadata before UE execution." />
+  </Node>
+
+  <Node Name="LF_Compile" Requires="LF_Validate">
+    <Compile Target="LastFrontierEditor" Configuration="$(Configuration)" Platform="$(Platform)" Project="$(Project)" />
+    <Compile Target="LastFrontier" Configuration="$(Configuration)" Platform="$(Platform)" Project="$(Project)" />
+  </Node>
+
+  <Node Name="LF_Cook" Requires="LF_Compile">
+    <Cook Project="$(Project)" Platform="$(Platform)" Maps="TestMap" />
+  </Node>
+
+  <Node Name="LF_Stage" Requires="LF_Cook">
+    <Stage Project="$(Project)" Target="LastFrontier" Platform="$(Platform)" Configuration="$(Configuration)" ToDir="$(ArchiveDir)/Staged" Overwrite="true" />
+  </Node>
+
+  <Aggregate Name="CompileOnly" Requires="LF_Compile" />
+  <Aggregate Name="FirstPlayable" Requires="LF_Stage" />
+</BuildGraph>

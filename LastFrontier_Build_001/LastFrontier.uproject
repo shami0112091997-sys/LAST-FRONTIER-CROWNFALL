@@ -1,0 +1,9 @@
+{
+  "FileVersion": 3,
+  "EngineAssociation": "5.8",
+  "Category": "Games",
+  "Description": "LAST FRONTIER: CROWNFALL - First Playable scaffold",
+  "Modules": [
+    { "Name": "LastFrontier", "Type": "Runtime", "LoadingPhase": "Default" }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "project": "LAST FRONTIER: CROWNFALL",
+  "engine_association": "5.8",
+  "baseline": "M44 / Static Preflight PASS",
+  "checkpoint": "M47 / Deep Pre-Compile Gate",
+  "static_precompile": "pass_with_warnings",
+  "real_ubt_compile": "blocked_current_container_missing_ue_5_8",
+  "build": "not_verified",
+  "cook": "not_verified",
+  "package": "not_verified",
+  "runtime_boot": "not_verified",
+  "automation_gauntlet": "not_verified",
+  "performance": "not_verified",
+  "known_blockers": [
+    "Unreal Engine 5.8 is not installed in the current container",
+    "Content/Maps/TestMap.umap is still absent for the original Cook/Package path"
+  ],
+  "last_compile_gate_attempt": "2026-10-03T19:23:52Z",
+  "last_compile_gate_exit_code": 2
+}

@@ -1,0 +1,3 @@
+M47_COMPILE_STATUS=BLOCKED_OR_FAILED
+REASON=UE 5.8 root not found. Set UE_ROOT to the Unreal Engine 5.8 installation.
+LOG=/mnt/data/LastFrontier_M47_CompileGate/LastFrontier_Build_001/Saved/M47Logs/M47_Compile_20261003_192352.log
