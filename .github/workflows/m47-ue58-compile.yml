@@ -1,0 +1,78 @@
+name: M47 - UE5.8 Compile
+
+on:
+  workflow_dispatch:
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout LAST FRONTIER
+        uses: actions/checkout@v4
+
+      - name: Verify Unreal project
+        shell: bash
+        run: |
+          set -e
+          PROJECT="LastFrontier_Build_001/LastFrontier.uproject"
+
+          test -f "$PROJECT"
+
+          echo "PROJECT_FOUND=$PROJECT"
+          cat "$PROJECT"
+
+      - name: Verify C++ source
+        shell: bash
+        run: |
+          set -e
+          test -f "LastFrontier_Build_001/Source/LastFrontier.Target.cs"
+          test -f "LastFrontier_Build_001/Source/LastFrontier/LastFrontier.Build.cs"
+          test -f "LastFrontier_Build_001/Source/LastFrontier/LastFrontier.cpp"
+
+          echo "M47_CPP_SOURCE=FOUND"
+
+      - name: Check for Unreal Engine
+        id: unreal
+        shell: bash
+        run: |
+          if [ -x "/opt/UnrealEngine/Engine/Build/BatchFiles/Linux/Build.sh" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            echo "UE_ENGINE=FOUND"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "UE_ENGINE=NOT_INSTALLED"
+          fi
+
+      - name: Compile LAST FRONTIER
+        if: steps.unreal.outputs.available == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          /opt/UnrealEngine/Engine/Build/BatchFiles/Linux/Build.sh \
+            LastFrontierEditor Linux Development \
+            "$(pwd)/LastFrontier_Build_001/LastFrontier.uproject" \
+            -Progress -NoHotReloadFromIDE
+
+          test -d "LastFrontier_Build_001/Binaries"
+
+          COUNT=$(find LastFrontier_Build_001/Binaries -type f | wc -l)
+
+          if [ "$COUNT" -eq 0 ]; then
+            echo "No binary artifacts produced."
+            exit 1
+          fi
+
+          echo "M47_BINARY_ARTIFACT_COUNT=$COUNT"
+          echo "M47_COMPILE_STATUS=PASS"
+
+      - name: Report engine requirement
+        if: steps.unreal.outputs.available != 'true'
+        shell: bash
+        run: |
+          echo "M47_COMPILE_STATUS=BLOCKED"
+          echo "Reason: Unreal Engine is not installed on this runner."
+          echo "A UE5.8-capable runner is required for the real compile."
+0
+
