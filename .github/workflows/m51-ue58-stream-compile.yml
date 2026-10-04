@@ -1,4 +1,4 @@
-name: M51 UE5.8 Stream Compile
+name: M51 UE5.8 Stream Compile - Engine Only
 
 on:
   workflow_dispatch:
@@ -18,7 +18,7 @@ jobs:
 
     env:
       UE_IMAGE: ghcr.io/epicgames/unreal-engine:dev-slim-5.8.0
-      UE_ROOT: /tmp/ue-root
+      UE_ROOT: /tmp/UE58
 
     steps:
       - name: Checkout LAST FRONTIER
@@ -57,7 +57,6 @@ jobs:
           sudo rm -rf /usr/local/share/chrome_driver || true
           sudo rm -rf /usr/local/share/gecko_driver || true
           sudo rm -rf /usr/lib/jvm || true
-          sudo rm -rf /usr/lib/llvm-* || true
           sudo rm -rf /opt/az /opt/microsoft || true
           sudo rm -rf /usr/local/aws-cli || true
           sudo rm -rf /usr/share/miniconda || true
@@ -84,66 +83,70 @@ jobs:
           crane digest --platform=linux/amd64 "$UE_IMAGE"
           echo "M51_EPIC_GHCR_LOGIN=PASS"
 
-      - name: Stream UE5.8 filesystem without heavy Content assets
+      - name: Stream only UnrealEngine files
         shell: bash
         run: |
           set -euo pipefail
           sudo rm -rf "$UE_ROOT"
           sudo mkdir -p "$UE_ROOT"
+          sudo chown "$USER:$USER" "$UE_ROOT"
 
+          echo "Streaming only /home/ue4/UnrealEngine from Epic image..."
           crane export --platform=linux/amd64 "$UE_IMAGE" - | \
-            sudo tar --numeric-owner -xpf - -C "$UE_ROOT" \
+            tar -xpf - -C "$UE_ROOT" \
               --wildcards \
-              --exclude='home/ue4/UnrealEngine/Engine/Content/*' \
-              --exclude='home/ue4/UnrealEngine/Engine/Plugins/*/Content/*' \
-              --exclude='home/ue4/UnrealEngine/Engine/Plugins/*/*/Content/*' \
-              --exclude='home/ue4/UnrealEngine/Engine/Plugins/*/*/*/Content/*' \
-              --exclude='home/ue4/UnrealEngine/Templates/*' \
-              --exclude='home/ue4/UnrealEngine/Samples/*' \
-              --exclude='home/ue4/UnrealEngine/FeaturePacks/*' \
-              --exclude='home/ue4/UnrealEngine/Engine/DerivedDataCache/*' \
-              --exclude='home/ue4/UnrealEngine/Engine/Documentation/*'
+              --strip-components=3 \
+              --exclude='*/Content/*' \
+              --exclude='*/FeaturePacks/*' \
+              --exclude='*/Templates/*' \
+              --exclude='*/Samples/*' \
+              --exclude='*/DerivedDataCache/*' \
+              --exclude='*/Documentation/*' \
+              'home/ue4/UnrealEngine/*'
 
-          test -x "$UE_ROOT/home/ue4/UnrealEngine/Engine/Build/BatchFiles/Linux/Build.sh"
-          test -f "$UE_ROOT/home/ue4/UnrealEngine/Engine/Binaries/DotNET/UnrealBuildTool/UnrealBuildTool.dll"
-          echo "=== Extracted UE root size ==="
-          sudo du -sh "$UE_ROOT"
+          echo "=== Engine-only footprint ==="
+          du -sh "$UE_ROOT" || true
           df -h /
-          echo "M51_UE_STREAM_EXTRACT=PASS"
+          echo "=== Engine root sample ==="
+          find "$UE_ROOT" -maxdepth 3 -type f | head -80 || true
 
-      - name: Compile LAST FRONTIER in streamed UE root
+          if [ ! -f "$UE_ROOT/Engine/Build/BatchFiles/Linux/Build.sh" ]; then
+            echo "M51_BUILD_SH_NOT_FOUND"
+            find "$UE_ROOT" -type f -name Build.sh -print | head -20 || true
+            exit 1
+          fi
+          if [ ! -f "$UE_ROOT/Engine/Binaries/DotNET/UnrealBuildTool/UnrealBuildTool.dll" ]; then
+            echo "M51_UBT_NOT_FOUND"
+            find "$UE_ROOT/Engine/Binaries" -iname '*UnrealBuildTool*' -print | head -40 || true
+            exit 1
+          fi
+          chmod +x "$UE_ROOT/Engine/Build/BatchFiles/Linux/Build.sh"
+          echo "M51_ENGINE_ONLY_EXTRACT=PASS"
+
+      - name: Compile LAST FRONTIER directly
         shell: bash
         run: |
           set -euo pipefail
-          sudo chown -R 1000:1000 LastFrontier_Build_001
-          sudo mkdir -p "$UE_ROOT/project" "$UE_ROOT/proc" "$UE_ROOT/sys" "$UE_ROOT/dev"
-          sudo mount --bind "$GITHUB_WORKSPACE/LastFrontier_Build_001" "$UE_ROOT/project"
-          sudo mount -t proc proc "$UE_ROOT/proc"
-          sudo mount --rbind /sys "$UE_ROOT/sys"
-          sudo mount --rbind /dev "$UE_ROOT/dev"
+          PROJECT="$GITHUB_WORKSPACE/LastFrontier_Build_001/LastFrontier.uproject"
+          LOG="$GITHUB_WORKSPACE/M51-compile.log"
 
-          cleanup_mounts() {
-            sudo umount -R "$UE_ROOT/project" 2>/dev/null || true
-            sudo umount -R "$UE_ROOT/proc" 2>/dev/null || true
-            sudo umount -R "$UE_ROOT/sys" 2>/dev/null || true
-            sudo umount -R "$UE_ROOT/dev" 2>/dev/null || true
-          }
-          trap cleanup_mounts EXIT
+          chmod -R u+rwX "$GITHUB_WORKSPACE/LastFrontier_Build_001"
+          cd "$UE_ROOT"
 
-          sudo chroot --userspec=1000:1000 "$UE_ROOT" \
-            /usr/bin/env \
-              HOME=/home/ue4 \
-              USER=ue4 \
-              LOGNAME=ue4 \
-              PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-            /bin/bash -lc '
-              cd /home/ue4/UnrealEngine
-              Engine/Build/BatchFiles/Linux/Build.sh \
-                LastFrontierEditor Linux Development \
-                /project/LastFrontier.uproject \
-                -Progress -NoHotReloadFromIDE
-            '
+          set +e
+          Engine/Build/BatchFiles/Linux/Build.sh \
+            LastFrontierEditor Linux Development \
+            "$PROJECT" \
+            -Progress -NoHotReloadFromIDE 2>&1 | tee "$LOG"
+          BUILD_RC=${PIPESTATUS[0]}
+          set -e
 
+          echo "M51_BUILD_EXIT_CODE=$BUILD_RC"
+          if [ "$BUILD_RC" -ne 0 ]; then
+            echo "=== Compile tail ==="
+            tail -120 "$LOG" || true
+            exit "$BUILD_RC"
+          fi
           echo "M51_COMPILE_COMMAND=PASS"
 
       - name: Verify binaries
@@ -160,7 +163,16 @@ jobs:
           echo "M51_BINARY_COUNT=$COUNT"
           echo "M51_COMPILE_STATUS=PASS"
 
-      - name: Upload compile evidence
+      - name: Upload compile log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: M51-Compile-Log
+          path: M51-compile.log
+          if-no-files-found: ignore
+          compression-level: 6
+
+      - name: Upload compiled binaries
         if: success()
         uses: actions/upload-artifact@v4
         with:
