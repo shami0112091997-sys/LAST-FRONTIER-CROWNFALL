@@ -1,4 +1,4 @@
-name: M52 UE5.8 Stream Compile - Preserve Build Modules
+name: M53 UE5.8 Stream Compile - Preserve Documentation Module
 
 on:
   workflow_dispatch:
@@ -36,7 +36,7 @@ jobs:
           test -f LastFrontier_Build_001/Source/LastFrontier/LastFrontier.cpp
           test -f LastFrontier_Build_001/Source/LastFrontier.Target.cs
           test -f LastFrontier_Build_001/Source/LastFrontierEditor.Target.cs
-          echo "M52_PROJECT_PREFLIGHT=PASS"
+          echo "M53_PROJECT_PREFLIGHT=PASS"
 
       - name: Deep free-space cleanup
         shell: bash
@@ -71,7 +71,7 @@ jobs:
           docker system prune -af --volumes || true
           echo "=== After cleanup ==="
           df -h /
-          echo "M52_CLEANUP=PASS"
+          echo "M53_CLEANUP=PASS"
 
       - name: Setup crane
         uses: imjasonh/setup-crane@v0.7
@@ -84,9 +84,9 @@ jobs:
             -u "${{ secrets.EPIC_GHCR_USER }}" \
             --password-stdin
           crane digest --platform=linux/amd64 "$UE_IMAGE"
-          echo "M52_EPIC_GHCR_LOGIN=PASS"
+          echo "M53_EPIC_GHCR_LOGIN=PASS"
 
-      - name: Stream UnrealEngine without bulky content
+      - name: Stream UnrealEngine preserving build modules
         shell: bash
         run: |
           set -euo pipefail
@@ -104,7 +104,6 @@ jobs:
               --exclude='*/Templates/*' \
               --exclude='*/Samples/*' \
               --exclude='home/ue4/UnrealEngine/Engine/DerivedDataCache/*' \
-              --exclude='*/Documentation/*' \
               'home/ue4/UnrealEngine/*'
 
           echo "=== Engine footprint ==="
@@ -116,20 +115,27 @@ jobs:
 
           DDC_RULE=$(find "$UE_ROOT/Engine/Source" -type f -name 'DerivedDataCache.Build.cs' -print -quit)
           if [ -z "$DDC_RULE" ]; then
-            echo "M52_DERIVED_DATA_CACHE_RULE=FAIL"
+            echo "M53_DERIVED_DATA_CACHE_RULE=FAIL"
             exit 1
           fi
-          echo "M52_DERIVED_DATA_CACHE_RULE=$DDC_RULE"
+          echo "M53_DERIVED_DATA_CACHE_RULE=$DDC_RULE"
+
+          DOC_RULE=$(find "$UE_ROOT/Engine/Source" -type f -name 'Documentation.Build.cs' -print -quit)
+          if [ -z "$DOC_RULE" ]; then
+            echo "M53_DOCUMENTATION_RULE=FAIL"
+            exit 1
+          fi
+          echo "M53_DOCUMENTATION_RULE=$DOC_RULE"
 
           chmod +x "$UE_ROOT/Engine/Build/BatchFiles/Linux/Build.sh"
-          echo "M52_ENGINE_EXTRACT=PASS"
+          echo "M53_ENGINE_EXTRACT=PASS"
 
       - name: Compile LAST FRONTIER directly
         shell: bash
         run: |
           set -euo pipefail
           PROJECT="$GITHUB_WORKSPACE/LastFrontier_Build_001/LastFrontier.uproject"
-          LOG="$GITHUB_WORKSPACE/M52-compile.log"
+          LOG="$GITHUB_WORKSPACE/M53-compile.log"
 
           chmod -R u+rwX "$GITHUB_WORKSPACE/LastFrontier_Build_001"
           cd "$UE_ROOT"
@@ -142,13 +148,13 @@ jobs:
           BUILD_RC=${PIPESTATUS[0]}
           set -e
 
-          echo "M52_BUILD_EXIT_CODE=$BUILD_RC"
+          echo "M53_BUILD_EXIT_CODE=$BUILD_RC"
           if [ "$BUILD_RC" -ne 0 ]; then
             echo "=== Compile tail ==="
-            tail -160 "$LOG" || true
+            tail -200 "$LOG" || true
             exit "$BUILD_RC"
           fi
-          echo "M52_COMPILE_COMMAND=PASS"
+          echo "M53_COMPILE_COMMAND=PASS"
 
       - name: Verify binaries
         shell: bash
@@ -158,18 +164,18 @@ jobs:
           find LastFrontier_Build_001/Binaries -type f -print
           COUNT=$(find LastFrontier_Build_001/Binaries -type f | wc -l)
           if [ "$COUNT" -eq 0 ]; then
-            echo "M52_COMPILE_STATUS=FAIL"
+            echo "M53_COMPILE_STATUS=FAIL"
             exit 1
           fi
-          echo "M52_BINARY_COUNT=$COUNT"
-          echo "M52_COMPILE_STATUS=PASS"
+          echo "M53_BINARY_COUNT=$COUNT"
+          echo "M53_COMPILE_STATUS=PASS"
 
       - name: Upload compile log
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: M52-Compile-Log
-          path: M52-compile.log
+          name: M53-Compile-Log
+          path: M53-compile.log
           if-no-files-found: ignore
           compression-level: 6
 
@@ -177,7 +183,7 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: M52-LastFrontier-Linux-Binaries
+          name: M53-LastFrontier-Linux-Binaries
           path: LastFrontier_Build_001/Binaries
           if-no-files-found: error
           compression-level: 0
