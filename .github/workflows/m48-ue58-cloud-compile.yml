@@ -32,7 +32,20 @@ jobs:
           echo "${{ secrets.EPIC_GHCR_TOKEN }}" | \
           docker login ghcr.io \
           -u "${{ secrets.EPIC_GHCR_USER }}" \
-          --password-stdin
+          --password-stdin      
+      - name: Free disk space
+        run: |          
+          echo "=== Disk before cleanup ==="
+          df -h
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/.ghcup
+          sudo rm -rf /opt/hostedtoolcache
+          sudo apt-get clean
+          docker system prune -af || true
+          echo "=== Disk after cleanup ==="
+          df -h
 
       - name: Pull Unreal Engine 5.8
         run: |
