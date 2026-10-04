@@ -6,6 +6,9 @@ on:
     branches: [ "main" ]
     paths:
       - ".github/workflows/m51-ue58-stream-compile.yml"
+      - "LastFrontier_Build_001/Source/**"
+      - "LastFrontier_Build_001/LastFrontier.uproject"
+      - "LastFrontier_Build_001/Config/**"
 
 permissions:
   contents: read
