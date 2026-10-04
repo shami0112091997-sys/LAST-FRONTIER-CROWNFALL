@@ -5,8 +5,7 @@ on:
 
 jobs:
   unreal-compile:
-    runs-on: [self-hosted, linux, x64, ue58]
-
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout LAST FRONTIER
         uses: actions/checkout@v4
