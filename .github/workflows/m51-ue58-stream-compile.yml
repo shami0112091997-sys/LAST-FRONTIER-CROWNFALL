@@ -1,0 +1,170 @@
+name: M51 UE5.8 Stream Compile
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+    paths:
+      - ".github/workflows/m51-ue58-stream-compile.yml"
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  unreal-compile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    env:
+      UE_IMAGE: ghcr.io/epicgames/unreal-engine:dev-slim-5.8.0
+      UE_ROOT: /tmp/ue-root
+
+    steps:
+      - name: Checkout LAST FRONTIER
+        uses: actions/checkout@v4
+
+      - name: Verify project
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f LastFrontier_Build_001/LastFrontier.uproject
+          test -f LastFrontier_Build_001/Source/LastFrontier/LastFrontier.Build.cs
+          test -f LastFrontier_Build_001/Source/LastFrontier/LastFrontier.cpp
+          test -f LastFrontier_Build_001/Source/LastFrontier.Target.cs
+          test -f LastFrontier_Build_001/Source/LastFrontierEditor.Target.cs
+          echo "M51_PROJECT_PREFLIGHT=PASS"
+
+      - name: Deep free-space cleanup
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "=== Before cleanup ==="
+          df -h /
+          sudo swapoff -a || true
+          sudo rm -f /swapfile || true
+          sudo rm -rf /usr/local/lib/android || true
+          sudo rm -rf /usr/share/dotnet || true
+          sudo rm -rf /opt/ghc /usr/local/.ghcup || true
+          sudo rm -rf /opt/hostedtoolcache || true
+          sudo rm -rf /usr/share/swift || true
+          sudo rm -rf /usr/local/julia* || true
+          sudo rm -rf /usr/local/share/boost || true
+          sudo rm -rf /usr/local/share/powershell || true
+          sudo rm -rf /usr/local/share/vcpkg || true
+          sudo rm -rf /usr/local/share/chromium || true
+          sudo rm -rf /usr/local/share/edge_driver || true
+          sudo rm -rf /usr/local/share/chrome_driver || true
+          sudo rm -rf /usr/local/share/gecko_driver || true
+          sudo rm -rf /usr/lib/jvm || true
+          sudo rm -rf /usr/lib/llvm-* || true
+          sudo rm -rf /opt/az /opt/microsoft || true
+          sudo rm -rf /usr/local/aws-cli || true
+          sudo rm -rf /usr/share/miniconda || true
+          sudo rm -rf /usr/local/lib/node_modules || true
+          sudo rm -rf /usr/share/gradle || true
+          sudo rm -rf /usr/local/sqlpackage || true
+          sudo apt-get clean || true
+          sudo rm -rf /var/lib/apt/lists/* || true
+          docker system prune -af --volumes || true
+          echo "=== After cleanup ==="
+          df -h /
+          echo "M51_CLEANUP=PASS"
+
+      - name: Setup crane
+        uses: imjasonh/setup-crane@v0.7
+
+      - name: Login to Epic GHCR with crane
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "${{ secrets.EPIC_GHCR_TOKEN }}" | crane auth login ghcr.io \
+            -u "${{ secrets.EPIC_GHCR_USER }}" \
+            --password-stdin
+          crane digest --platform=linux/amd64 "$UE_IMAGE"
+          echo "M51_EPIC_GHCR_LOGIN=PASS"
+
+      - name: Stream UE5.8 filesystem without heavy Content assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo rm -rf "$UE_ROOT"
+          sudo mkdir -p "$UE_ROOT"
+
+          crane export --platform=linux/amd64 "$UE_IMAGE" - | \
+            sudo tar --numeric-owner -xpf - -C "$UE_ROOT" \
+              --wildcards \
+              --exclude='home/ue4/UnrealEngine/Engine/Content/*' \
+              --exclude='home/ue4/UnrealEngine/Engine/Plugins/*/Content/*' \
+              --exclude='home/ue4/UnrealEngine/Engine/Plugins/*/*/Content/*' \
+              --exclude='home/ue4/UnrealEngine/Engine/Plugins/*/*/*/Content/*' \
+              --exclude='home/ue4/UnrealEngine/Templates/*' \
+              --exclude='home/ue4/UnrealEngine/Samples/*' \
+              --exclude='home/ue4/UnrealEngine/FeaturePacks/*' \
+              --exclude='home/ue4/UnrealEngine/Engine/DerivedDataCache/*' \
+              --exclude='home/ue4/UnrealEngine/Engine/Documentation/*'
+
+          test -x "$UE_ROOT/home/ue4/UnrealEngine/Engine/Build/BatchFiles/Linux/Build.sh"
+          test -f "$UE_ROOT/home/ue4/UnrealEngine/Engine/Binaries/DotNET/UnrealBuildTool/UnrealBuildTool.dll"
+          echo "=== Extracted UE root size ==="
+          sudo du -sh "$UE_ROOT"
+          df -h /
+          echo "M51_UE_STREAM_EXTRACT=PASS"
+
+      - name: Compile LAST FRONTIER in streamed UE root
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo chown -R 1000:1000 LastFrontier_Build_001
+          sudo mkdir -p "$UE_ROOT/project" "$UE_ROOT/proc" "$UE_ROOT/sys" "$UE_ROOT/dev"
+          sudo mount --bind "$GITHUB_WORKSPACE/LastFrontier_Build_001" "$UE_ROOT/project"
+          sudo mount -t proc proc "$UE_ROOT/proc"
+          sudo mount --rbind /sys "$UE_ROOT/sys"
+          sudo mount --rbind /dev "$UE_ROOT/dev"
+
+          cleanup_mounts() {
+            sudo umount -R "$UE_ROOT/project" 2>/dev/null || true
+            sudo umount -R "$UE_ROOT/proc" 2>/dev/null || true
+            sudo umount -R "$UE_ROOT/sys" 2>/dev/null || true
+            sudo umount -R "$UE_ROOT/dev" 2>/dev/null || true
+          }
+          trap cleanup_mounts EXIT
+
+          sudo chroot --userspec=1000:1000 "$UE_ROOT" \
+            /usr/bin/env \
+              HOME=/home/ue4 \
+              USER=ue4 \
+              LOGNAME=ue4 \
+              PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+            /bin/bash -lc '
+              cd /home/ue4/UnrealEngine
+              Engine/Build/BatchFiles/Linux/Build.sh \
+                LastFrontierEditor Linux Development \
+                /project/LastFrontier.uproject \
+                -Progress -NoHotReloadFromIDE
+            '
+
+          echo "M51_COMPILE_COMMAND=PASS"
+
+      - name: Verify binaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -d LastFrontier_Build_001/Binaries
+          find LastFrontier_Build_001/Binaries -type f -print
+          COUNT=$(find LastFrontier_Build_001/Binaries -type f | wc -l)
+          if [ "$COUNT" -eq 0 ]; then
+            echo "M51_COMPILE_STATUS=FAIL"
+            exit 1
+          fi
+          echo "M51_BINARY_COUNT=$COUNT"
+          echo "M51_COMPILE_STATUS=PASS"
+
+      - name: Upload compile evidence
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: M51-LastFrontier-Linux-Binaries
+          path: LastFrontier_Build_001/Binaries
+          if-no-files-found: error
+          compression-level: 0
