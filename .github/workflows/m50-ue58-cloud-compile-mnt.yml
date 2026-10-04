@@ -158,3 +158,5 @@ jobs:
           path: LastFrontier_Build_001/Binaries
           if-no-files-found: error
           compression-level: 0
+
+# M50 trigger revision 2
