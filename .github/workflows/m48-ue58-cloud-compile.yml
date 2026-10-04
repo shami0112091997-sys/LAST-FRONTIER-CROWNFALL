@@ -1,0 +1,64 @@
+name: M48 UE5.8 Cloud Compile
+
+on:
+  workflow_dispatch:
+
+jobs:
+  unreal-compile:
+    runs-on: [self-hosted, linux, x64, ue58]
+
+    steps:
+      - name: Checkout LAST FRONTIER
+        uses: actions/checkout@v4
+
+      - name: Verify project
+        shell: bash
+        run: |
+          set -e
+          test -f LastFrontier_Build_001/LastFrontier.uproject
+          test -f LastFrontier_Build_001/Source/LastFrontier/LastFrontier.Build.cs
+          test -f LastFrontier_Build_001/Source/LastFrontier/LastFrontier.cpp
+          test -f LastFrontier_Build_001/Source/LastFrontier.Target.cs
+          test -f LastFrontier_Build_001/Source/LastFrontierEditor.Target.cs
+          echo "M48_PROJECT_PREFLIGHT=PASS"
+
+      - name: Check Docker
+        run: |
+          docker --version
+          df -h
+          echo "M48_DOCKER=PASS"
+
+      - name: Login to Epic GHCR
+        run: |
+          echo "${{ secrets.EPIC_GHCR_TOKEN }}" | \
+          docker login ghcr.io \
+          -u "${{ secrets.EPIC_GHCR_USER }}" \
+          --password-stdin
+
+      - name: Pull Unreal Engine 5.8
+        run: |
+          docker pull ghcr.io/epicgames/unreal-engine:dev-slim-5.8.0
+
+      - name: Compile LAST FRONTIER
+        run: |
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE/LastFrontier_Build_001:/project" \
+            ghcr.io/epicgames/unreal-engine:dev-slim-5.8.0 \
+            /home/ue4/UnrealEngine/Engine/Build/BatchFiles/Linux/Build.sh \
+            LastFrontierEditor Linux Development \
+            /project/LastFrontier.uproject \
+            -Progress -NoHotReloadFromIDE
+
+      - name: Verify binaries
+        run: |
+          test -d LastFrontier_Build_001/Binaries
+          find LastFrontier_Build_001/Binaries -type f -print
+          COUNT=$(find LastFrontier_Build_001/Binaries -type f | wc -l)
+
+          if [ "$COUNT" -eq 0 ]; then
+            echo "M48_COMPILE_STATUS=FAIL"
+            exit 1
+          fi
+
+          echo "M48_BINARY_COUNT=$COUNT"
+          echo "M48_COMPILE_STATUS=PASS"
