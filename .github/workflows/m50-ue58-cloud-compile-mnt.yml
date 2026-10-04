@@ -1,0 +1,160 @@
+name: M50 UE5.8 Cloud Compile - MNT Storage
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+    paths:
+      - ".github/workflows/m50-ue58-cloud-compile-mnt.yml"
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  unreal-compile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+
+    steps:
+      - name: Checkout LAST FRONTIER
+        uses: actions/checkout@v4
+
+      - name: Verify project
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f LastFrontier_Build_001/LastFrontier.uproject
+          test -f LastFrontier_Build_001/Source/LastFrontier/LastFrontier.Build.cs
+          test -f LastFrontier_Build_001/Source/LastFrontier/LastFrontier.cpp
+          test -f LastFrontier_Build_001/Source/LastFrontier.Target.cs
+          test -f LastFrontier_Build_001/Source/LastFrontierEditor.Target.cs
+          echo "M50_PROJECT_PREFLIGHT=PASS"
+
+      - name: Login to Epic GHCR
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "${{ secrets.EPIC_GHCR_TOKEN }}" | docker login ghcr.io \
+            -u "${{ secrets.EPIC_GHCR_USER }}" \
+            --password-stdin
+          echo "M50_EPIC_GHCR_LOGIN=PASS"
+
+      - name: Aggressive runner cleanup
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "=== Filesystems before cleanup ==="
+          df -h / /mnt || true
+
+          sudo swapoff -a || true
+          sudo rm -f /swapfile || true
+          sudo rm -rf /usr/local/lib/android || true
+          sudo rm -rf /usr/share/dotnet || true
+          sudo rm -rf /opt/ghc || true
+          sudo rm -rf /usr/local/.ghcup || true
+          sudo rm -rf /opt/hostedtoolcache || true
+          sudo rm -rf /usr/share/swift || true
+          sudo rm -rf /usr/local/julia* || true
+          sudo rm -rf /usr/local/share/boost || true
+          sudo rm -rf /usr/local/share/powershell || true
+          sudo rm -rf /usr/local/share/vcpkg || true
+          sudo rm -rf /usr/local/share/chromium || true
+          sudo rm -rf /usr/lib/jvm || true
+          sudo rm -rf /opt/az || true
+          sudo rm -rf /usr/local/aws-cli || true
+          sudo rm -rf /usr/share/miniconda || true
+          sudo rm -rf /usr/local/lib/node_modules || true
+          sudo apt-get clean || true
+          sudo rm -rf /var/lib/apt/lists/* || true
+          docker system prune -af --volumes || true
+
+          echo "=== Filesystems after cleanup ==="
+          df -h / /mnt || true
+          echo "M50_CLEANUP=PASS"
+
+      - name: Move Docker storage to /mnt
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ROOT_DEV=$(df -P / | awk 'NR==2 {print $1}')
+          MNT_DEV=$(df -P /mnt | awk 'NR==2 {print $1}')
+          ROOT_KB=$(df -P / | awk 'NR==2 {print $4}')
+          MNT_KB=$(df -P /mnt | awk 'NR==2 {print $4}')
+
+          echo "M50_ROOT_DEVICE=$ROOT_DEV"
+          echo "M50_MNT_DEVICE=$MNT_DEV"
+          echo "M50_ROOT_AVAILABLE_KB=$ROOT_KB"
+          echo "M50_MNT_AVAILABLE_KB=$MNT_KB"
+
+          sudo systemctl stop docker || true
+          sudo rm -rf /mnt/docker-data
+          sudo mkdir -p /mnt/docker-data
+
+          sudo python3 - <<'PY'
+          import json
+          p='/etc/docker/daemon.json'
+          try:
+              with open(p) as f:
+                  data=json.load(f)
+          except Exception:
+              data={}
+          data['data-root']='/mnt/docker-data'
+          with open(p,'w') as f:
+              json.dump(data,f)
+          PY
+
+          sudo systemctl daemon-reload
+          sudo systemctl start docker
+          sleep 3
+          docker info --format 'M50_DOCKER_ROOT={{.DockerRootDir}}'
+          test "$(docker info --format '{{.DockerRootDir}}')" = "/mnt/docker-data"
+          df -h / /mnt
+          echo "M50_DOCKER_RELOCATION=PASS"
+
+      - name: Pull Unreal Engine 5.8
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull ghcr.io/epicgames/unreal-engine:dev-slim-5.8.0
+          echo "M50_UE_IMAGE_PULL=PASS"
+          df -h / /mnt
+          docker system df || true
+
+      - name: Compile LAST FRONTIER
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo chmod -R a+rwX LastFrontier_Build_001
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE/LastFrontier_Build_001:/project" \
+            ghcr.io/epicgames/unreal-engine:dev-slim-5.8.0 \
+            /home/ue4/UnrealEngine/Engine/Build/BatchFiles/Linux/Build.sh \
+            LastFrontierEditor Linux Development \
+            /project/LastFrontier.uproject \
+            -Progress -NoHotReloadFromIDE
+          echo "M50_COMPILE_COMMAND=PASS"
+
+      - name: Verify binaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -d LastFrontier_Build_001/Binaries
+          find LastFrontier_Build_001/Binaries -type f -print
+          COUNT=$(find LastFrontier_Build_001/Binaries -type f | wc -l)
+          if [ "$COUNT" -eq 0 ]; then
+            echo "M50_COMPILE_STATUS=FAIL"
+            exit 1
+          fi
+          echo "M50_BINARY_COUNT=$COUNT"
+          echo "M50_COMPILE_STATUS=PASS"
+
+      - name: Upload compile evidence
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: M50-LastFrontier-Linux-Binaries
+          path: LastFrontier_Build_001/Binaries
+          if-no-files-found: error
+          compression-level: 0
