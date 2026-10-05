@@ -7,4 +7,7 @@ UCLASS()
 class LASTFRONTIER_API ALFGameMode : public AGameModeBase
 {
     GENERATED_BODY()
+
+public:
+    ALFGameMode();
 };
