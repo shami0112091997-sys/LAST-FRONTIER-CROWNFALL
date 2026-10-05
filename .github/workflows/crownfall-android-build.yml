@@ -38,20 +38,29 @@ jobs:
         with:
           gradle-version: "8.11.1"
 
-      - name: Build debug APK and release AAB
+      - name: Build v0.10 test APK and release AAB
         working-directory: CROWNFALL_Stronghold_Android
         run: gradle :app:assembleDebug :app:bundleRelease --stacktrace
 
-      - name: Upload debug APK
+      - name: Verify v0.10 test APK signature
+        shell: bash
+        run: |
+          APK="CROWNFALL_Stronghold_Android/app/build/outputs/apk/debug/app-debug.apk"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK" | tee CROWNFALL_v0.10_APK_Signature_Report.txt
+          echo "Package is the isolated test build: com.crownfall.stronghold.test" >> CROWNFALL_v0.10_APK_Signature_Report.txt
+
+      - name: Upload v0.10 test APK
         uses: actions/upload-artifact@v4
         with:
-          name: CROWNFALL-Stronghold-v0.9-debug-apk
-          path: CROWNFALL_Stronghold_Android/app/build/outputs/apk/debug/app-debug.apk
+          name: CROWNFALL-Stronghold-v0.10-test-apk
+          path: |
+            CROWNFALL_Stronghold_Android/app/build/outputs/apk/debug/app-debug.apk
+            CROWNFALL_v0.10_APK_Signature_Report.txt
           if-no-files-found: error
 
       - name: Upload release AAB
         uses: actions/upload-artifact@v4
         with:
-          name: CROWNFALL-Stronghold-v0.9-release-aab-unsigned
+          name: CROWNFALL-Stronghold-v0.10-release-aab-unsigned
           path: CROWNFALL_Stronghold_Android/app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: error
