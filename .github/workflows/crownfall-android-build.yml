@@ -31,34 +31,46 @@ jobs:
           echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
           echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null 2>&1 || true
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-35" "platforms;android-36" "build-tools;36.0.0"
 
       - name: Set up Gradle 8.11.1
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.11.1"
 
-      - name: Build v0.11 preview APK
+      - name: Build v0.23 compatibility APK
         working-directory: CROWNFALL_Stronghold_Android
-        run: gradle :app:assemblePreview --stacktrace
+        run: gradle :app:assembleCompatRelease --stacktrace
 
-      - name: Verify v0.11 preview APK
+      - name: Build v0.23 Play AAB staging bundle
+        working-directory: CROWNFALL_Stronghold_Android
+        run: gradle :app:bundlePlayRelease --stacktrace
+
+      - name: Verify v0.23 APK
         shell: bash
         run: |
-          APK="CROWNFALL_Stronghold_Android/app/build/outputs/apk/preview/app-preview.apk"
+          APK="CROWNFALL_Stronghold_Android/app/build/outputs/apk/compat/release/app-compat-release.apk"
+          AAB="CROWNFALL_Stronghold_Android/app/build/outputs/bundle/playRelease/app-play-release.aab"
           test -f "$APK"
+          test -f "$AAB"
           unzip -t "$APK"
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK" | tee CROWNFALL_v0.11_APK_Signature_Report.txt
-          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | tee CROWNFALL_v0.11_APK_Badging.txt
-          grep -q "package: name='com.crownfall.stronghold.preview011'" CROWNFALL_v0.11_APK_Badging.txt
-          grep -q "application-label:'CROWNFALL TEST 0.11'" CROWNFALL_v0.11_APK_Badging.txt
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK" | tee CROWNFALL_v0.23_APK_Signature_Report.txt
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | tee CROWNFALL_v0.23_APK_Badging.txt
+          grep -q "package: name='com.crownfall.stronghold.preview023'" CROWNFALL_v0.23_APK_Badging.txt
+          grep -q "targetSdkVersion:'35'" CROWNFALL_v0.23_APK_Badging.txt
+          grep -q "application-label:'CROWNFALL TEST 0.23'" CROWNFALL_v0.23_APK_Badging.txt
+          sha256sum "$APK" "$AAB" | tee CROWNFALL_v0.23_SHA256.txt
+          cp "$APK" CROWNFALL_Stronghold_v0.23_Android_Test.apk
+          cp "$AAB" CROWNFALL_Stronghold_v0.23_Play_Staging.aab
 
-      - name: Upload v0.11 preview APK
+      - name: Upload v0.23 Android artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: CROWNFALL-Stronghold-v0.11-preview-apk
+          name: CROWNFALL-Stronghold-v0.23-android
           path: |
-            CROWNFALL_Stronghold_Android/app/build/outputs/apk/preview/app-preview.apk
-            CROWNFALL_v0.11_APK_Signature_Report.txt
-            CROWNFALL_v0.11_APK_Badging.txt
+            CROWNFALL_Stronghold_v0.23_Android_Test.apk
+            CROWNFALL_Stronghold_v0.23_Play_Staging.aab
+            CROWNFALL_v0.23_APK_Signature_Report.txt
+            CROWNFALL_v0.23_APK_Badging.txt
+            CROWNFALL_v0.23_SHA256.txt
           if-no-files-found: error
