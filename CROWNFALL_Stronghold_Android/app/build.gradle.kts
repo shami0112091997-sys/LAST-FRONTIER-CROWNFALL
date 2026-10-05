@@ -10,12 +10,16 @@ android {
         applicationId = "com.crownfall.stronghold"
         minSdk = 24
         targetSdk = 36
-        versionCode = 9
-        versionName = "0.9"
+        versionCode = 10
+        versionName = "0.10"
     }
 
     buildTypes {
-        debug { isMinifyEnabled = false }
+        debug {
+            isMinifyEnabled = false
+            applicationIdSuffix = ".test"
+            versionNameSuffix = "-test"
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
