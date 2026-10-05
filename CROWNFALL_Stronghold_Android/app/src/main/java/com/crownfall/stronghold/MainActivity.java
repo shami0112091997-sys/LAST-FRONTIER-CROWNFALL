@@ -3,6 +3,8 @@ package com.crownfall.stronghold;
 import android.app.Activity;
 import android.os.Bundle;
 import android.view.View;
+import android.view.WindowInsets;
+import android.view.WindowInsetsController;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -12,24 +14,35 @@ public class MainActivity extends Activity {
     private WebView webView;
 
     private void immersive() {
-        getWindow().getDecorView().setSystemUiVisibility(
-            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-            | View.SYSTEM_UI_FLAG_FULLSCREEN
-            | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-            | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-            | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-            | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-        );
+        if (android.os.Build.VERSION.SDK_INT >= 30) {
+            WindowInsetsController c = getWindow().getInsetsController();
+            if (c != null) {
+                c.hide(WindowInsets.Type.statusBars() | WindowInsets.Type.navigationBars());
+                c.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+            }
+        } else {
+            getWindow().getDecorView().setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                | View.SYSTEM_UI_FLAG_FULLSCREEN
+                | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+            );
+        }
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         immersive();
+
         webView = new WebView(this);
+        webView.setBackgroundColor(0xFF061017);
         setContentView(webView);
         webView.setWebViewClient(new WebViewClient());
         webView.setWebChromeClient(new WebChromeClient());
+
         WebSettings s = webView.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
@@ -37,8 +50,12 @@ public class MainActivity extends Activity {
         s.setAllowContentAccess(true);
         s.setLoadsImagesAutomatically(true);
         s.setUseWideViewPort(true);
-        s.setLoadWithOverviewMode(true);
+        s.setLoadWithOverviewMode(false);
         s.setMediaPlaybackRequiresUserGesture(false);
+        s.setBuiltInZoomControls(false);
+        s.setDisplayZoomControls(false);
+        s.setSupportZoom(false);
+
         webView.loadUrl("file:///android_asset/www/index.html");
     }
 
@@ -46,6 +63,13 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         immersive();
+        if (webView != null) webView.onResume();
+    }
+
+    @Override
+    protected void onPause() {
+        if (webView != null) webView.onPause();
+        super.onPause();
     }
 
     @Override
