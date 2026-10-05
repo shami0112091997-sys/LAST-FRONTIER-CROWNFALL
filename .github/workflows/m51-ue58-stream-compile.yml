@@ -1,4 +1,4 @@
-name: M53 UE5.8 Stream Compile - Preserve Documentation Module
+name: M54 UE5.8 Stream Compile - Skip Engine Test Headers
 
 on:
   workflow_dispatch:
@@ -36,7 +36,7 @@ jobs:
           test -f LastFrontier_Build_001/Source/LastFrontier/LastFrontier.cpp
           test -f LastFrontier_Build_001/Source/LastFrontier.Target.cs
           test -f LastFrontier_Build_001/Source/LastFrontierEditor.Target.cs
-          echo "M53_PROJECT_PREFLIGHT=PASS"
+          echo "M54_PROJECT_PREFLIGHT=PASS"
 
       - name: Deep free-space cleanup
         shell: bash
@@ -71,7 +71,7 @@ jobs:
           docker system prune -af --volumes || true
           echo "=== After cleanup ==="
           df -h /
-          echo "M53_CLEANUP=PASS"
+          echo "M54_CLEANUP=PASS"
 
       - name: Setup crane
         uses: imjasonh/setup-crane@v0.7
@@ -84,9 +84,9 @@ jobs:
             -u "${{ secrets.EPIC_GHCR_USER }}" \
             --password-stdin
           crane digest --platform=linux/amd64 "$UE_IMAGE"
-          echo "M53_EPIC_GHCR_LOGIN=PASS"
+          echo "M54_EPIC_GHCR_LOGIN=PASS"
 
-      - name: Stream UnrealEngine preserving build modules
+      - name: Stream UnrealEngine without CoreUObject tests
         shell: bash
         run: |
           set -euo pipefail
@@ -94,7 +94,7 @@ jobs:
           sudo mkdir -p "$UE_ROOT"
           sudo chown "$USER:$USER" "$UE_ROOT"
 
-          echo "Streaming /home/ue4/UnrealEngine while preserving source build modules..."
+          echo "Streaming UnrealEngine while excluding the CoreUObject test-only headers that blocked UHT..."
           crane export --platform=linux/amd64 "$UE_IMAGE" - | \
             tar -xpf - -C "$UE_ROOT" \
               --wildcards \
@@ -104,6 +104,7 @@ jobs:
               --exclude='*/Templates/*' \
               --exclude='*/Samples/*' \
               --exclude='home/ue4/UnrealEngine/Engine/DerivedDataCache/*' \
+              --exclude='home/ue4/UnrealEngine/Engine/Source/Runtime/CoreUObject/Tests/*' \
               'home/ue4/UnrealEngine/*'
 
           echo "=== Engine footprint ==="
@@ -112,30 +113,26 @@ jobs:
 
           test -f "$UE_ROOT/Engine/Build/BatchFiles/Linux/Build.sh"
           test -f "$UE_ROOT/Engine/Binaries/DotNET/UnrealBuildTool/UnrealBuildTool.dll"
+          test -f "$UE_ROOT/Engine/Source/Developer/DerivedDataCache/DerivedDataCache.Build.cs"
+          test -f "$UE_ROOT/Engine/Source/Editor/Documentation/Documentation.Build.cs"
+          test -f "$UE_ROOT/Engine/Source/Runtime/CoreUObject/Public/Templates/SubScriptStructOf.h"
 
-          DDC_RULE=$(find "$UE_ROOT/Engine/Source" -type f -name 'DerivedDataCache.Build.cs' -print -quit)
-          if [ -z "$DDC_RULE" ]; then
-            echo "M53_DERIVED_DATA_CACHE_RULE=FAIL"
+          if [ -e "$UE_ROOT/Engine/Source/Runtime/CoreUObject/Tests/SubScriptStructOfTest.h" ]; then
+            echo "M54_COREUOBJECT_TEST_EXCLUSION=FAIL"
             exit 1
           fi
-          echo "M53_DERIVED_DATA_CACHE_RULE=$DDC_RULE"
-
-          DOC_RULE=$(find "$UE_ROOT/Engine/Source" -type f -name 'Documentation.Build.cs' -print -quit)
-          if [ -z "$DOC_RULE" ]; then
-            echo "M53_DOCUMENTATION_RULE=FAIL"
-            exit 1
-          fi
-          echo "M53_DOCUMENTATION_RULE=$DOC_RULE"
+          echo "M54_SUBSCRIPTSTRUCTOF_HEADER=PASS"
+          echo "M54_COREUOBJECT_TEST_EXCLUSION=PASS"
 
           chmod +x "$UE_ROOT/Engine/Build/BatchFiles/Linux/Build.sh"
-          echo "M53_ENGINE_EXTRACT=PASS"
+          echo "M54_ENGINE_EXTRACT=PASS"
 
       - name: Compile LAST FRONTIER directly
         shell: bash
         run: |
           set -euo pipefail
           PROJECT="$GITHUB_WORKSPACE/LastFrontier_Build_001/LastFrontier.uproject"
-          LOG="$GITHUB_WORKSPACE/M53-compile.log"
+          LOG="$GITHUB_WORKSPACE/M54-compile.log"
 
           chmod -R u+rwX "$GITHUB_WORKSPACE/LastFrontier_Build_001"
           cd "$UE_ROOT"
@@ -148,13 +145,13 @@ jobs:
           BUILD_RC=${PIPESTATUS[0]}
           set -e
 
-          echo "M53_BUILD_EXIT_CODE=$BUILD_RC"
+          echo "M54_BUILD_EXIT_CODE=$BUILD_RC"
           if [ "$BUILD_RC" -ne 0 ]; then
             echo "=== Compile tail ==="
-            tail -200 "$LOG" || true
+            tail -240 "$LOG" || true
             exit "$BUILD_RC"
           fi
-          echo "M53_COMPILE_COMMAND=PASS"
+          echo "M54_COMPILE_COMMAND=PASS"
 
       - name: Verify binaries
         shell: bash
@@ -164,18 +161,18 @@ jobs:
           find LastFrontier_Build_001/Binaries -type f -print
           COUNT=$(find LastFrontier_Build_001/Binaries -type f | wc -l)
           if [ "$COUNT" -eq 0 ]; then
-            echo "M53_COMPILE_STATUS=FAIL"
+            echo "M54_COMPILE_STATUS=FAIL"
             exit 1
           fi
-          echo "M53_BINARY_COUNT=$COUNT"
-          echo "M53_COMPILE_STATUS=PASS"
+          echo "M54_BINARY_COUNT=$COUNT"
+          echo "M54_COMPILE_STATUS=PASS"
 
       - name: Upload compile log
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: M53-Compile-Log
-          path: M53-compile.log
+          name: M54-Compile-Log
+          path: M54-compile.log
           if-no-files-found: ignore
           compression-level: 6
 
@@ -183,7 +180,7 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: M53-LastFrontier-Linux-Binaries
+          name: M54-LastFrontier-Linux-Binaries
           path: LastFrontier_Build_001/Binaries
           if-no-files-found: error
           compression-level: 0
