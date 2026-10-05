@@ -38,29 +38,27 @@ jobs:
         with:
           gradle-version: "8.11.1"
 
-      - name: Build v0.10 test APK and release AAB
+      - name: Build v0.11 preview APK
         working-directory: CROWNFALL_Stronghold_Android
-        run: gradle :app:assembleDebug :app:bundleRelease --stacktrace
+        run: gradle :app:assemblePreview --stacktrace
 
-      - name: Verify v0.10 test APK signature
+      - name: Verify v0.11 preview APK
         shell: bash
         run: |
-          APK="CROWNFALL_Stronghold_Android/app/build/outputs/apk/debug/app-debug.apk"
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK" | tee CROWNFALL_v0.10_APK_Signature_Report.txt
-          echo "Package is the isolated test build: com.crownfall.stronghold.test" >> CROWNFALL_v0.10_APK_Signature_Report.txt
+          APK="CROWNFALL_Stronghold_Android/app/build/outputs/apk/preview/app-preview.apk"
+          test -f "$APK"
+          unzip -t "$APK"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK" | tee CROWNFALL_v0.11_APK_Signature_Report.txt
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | tee CROWNFALL_v0.11_APK_Badging.txt
+          grep -q "package: name='com.crownfall.stronghold.preview011'" CROWNFALL_v0.11_APK_Badging.txt
+          grep -q "application-label:'CROWNFALL TEST 0.11'" CROWNFALL_v0.11_APK_Badging.txt
 
-      - name: Upload v0.10 test APK
+      - name: Upload v0.11 preview APK
         uses: actions/upload-artifact@v4
         with:
-          name: CROWNFALL-Stronghold-v0.10-test-apk
+          name: CROWNFALL-Stronghold-v0.11-preview-apk
           path: |
-            CROWNFALL_Stronghold_Android/app/build/outputs/apk/debug/app-debug.apk
-            CROWNFALL_v0.10_APK_Signature_Report.txt
-          if-no-files-found: error
-
-      - name: Upload release AAB
-        uses: actions/upload-artifact@v4
-        with:
-          name: CROWNFALL-Stronghold-v0.10-release-aab-unsigned
-          path: CROWNFALL_Stronghold_Android/app/build/outputs/bundle/release/app-release.aab
+            CROWNFALL_Stronghold_Android/app/build/outputs/apk/preview/app-preview.apk
+            CROWNFALL_v0.11_APK_Signature_Report.txt
+            CROWNFALL_v0.11_APK_Badging.txt
           if-no-files-found: error
