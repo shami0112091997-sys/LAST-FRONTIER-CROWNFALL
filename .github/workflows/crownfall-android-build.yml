@@ -33,17 +33,17 @@ jobs:
         with:
           gradle-version: "8.11.1"
 
-      - name: Assemble production web assets
+      - name: Prepare production game asset
         shell: bash
         run: |
           set -euo pipefail
-          PARTS="CROWNFALL_Stronghold_Android/app/src/main/assets/google_play_parts"
           TARGET="CROWNFALL_Stronghold_Android/app/src/main/assets/www/index.html"
-          test -d "$PARTS"
-          cat "$PARTS"/part*.txt > "$TARGET"
+          test -f "$TARGET"
+          sed -i 's/CROWNFALL TEST 0.23/CROWNFALL: STRONGHOLD/g' "$TARGET"
+          sed -i 's/v0.23 Android Preview/v1.0 Google Play/g' "$TARGET"
+          sed -i 's/crownfall_v023_android/crownfall_v100_android/g' "$TARGET"
           grep -q "CROWNFALL: STRONGHOLD" "$TARGET"
-          grep -q "v1.0" "$TARGET"
-          echo "Production web asset bytes: $(wc -c < "$TARGET")"
+          echo "Production game asset bytes: $(wc -c < "$TARGET")"
 
       - name: Require Google Play upload-key secrets
         shell: bash
