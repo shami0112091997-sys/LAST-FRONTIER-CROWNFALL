@@ -2,6 +2,11 @@ name: CROWNFALL Google Play Release
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "CROWNFALL_Stronghold_Android/**"
+      - ".github/workflows/crownfall-android-build.yml"
 
 jobs:
   google-play-release:
@@ -33,17 +38,24 @@ jobs:
         with:
           gradle-version: "8.11.1"
 
-      - name: Prepare production game asset
+      - name: Validate production game asset
         shell: bash
         run: |
           set -euo pipefail
           TARGET="CROWNFALL_Stronghold_Android/app/src/main/assets/www/index.html"
-          test -f "$TARGET"
-          sed -i 's/CROWNFALL TEST 0.23/CROWNFALL: STRONGHOLD/g' "$TARGET"
-          sed -i 's/v0.23 Android Preview/v1.0 Google Play/g' "$TARGET"
-          sed -i 's/crownfall_v023_android/crownfall_v100_android/g' "$TARGET"
+          test -s "$TARGET"
           grep -q "CROWNFALL: STRONGHOLD" "$TARGET"
-          echo "Production game asset bytes: $(wc -c < "$TARGET")"
+          grep -q "الإصدار 1.0" "$TARGET"
+          grep -q "crownfall_v100_android" "$TARGET"
+          if grep -Eq "CROWNFALL TEST|Android Preview|preview023|crownfall_v023_android" "$TARGET"; then
+            echo "Preview/test marker found in production game asset."
+            exit 1
+          fi
+          if grep -Eqi "https?://|firebase|analytics|adsbygoogle|websocket" "$TARGET"; then
+            echo "Unexpected network/analytics marker found in offline production asset."
+            exit 1
+          fi
+          echo "Production game asset validated: $(wc -c < "$TARGET") bytes"
 
       - name: Require Google Play upload-key secrets
         shell: bash
