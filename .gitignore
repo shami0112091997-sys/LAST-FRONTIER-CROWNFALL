@@ -1,0 +1,12 @@
+# CROWNFALL signing material — never commit private keys or recovery credentials
+*.jks
+*.keystore
+*Signing_Recovery*.txt
+*signing*.properties
+keystore.properties
+
+# Android build outputs
+**/.gradle/
+**/build/
+**/local.properties
+**/*.iml
