@@ -10,31 +10,35 @@ android {
         applicationId = "com.crownfall.stronghold"
         minSdk = 24
         targetSdk = 36
-        versionCode = 11
-        versionName = "0.11"
+        versionCode = 23
+        versionName = "0.23"
         manifestPlaceholders["appLabel"] = "CROWNFALL: Stronghold"
+    }
+
+    flavorDimensions += "channel"
+    productFlavors {
+        create("compat") {
+            dimension = "channel"
+            applicationIdSuffix = ".preview023"
+            versionNameSuffix = "-preview"
+            targetSdk = 35
+            signingConfig = signingConfigs.getByName("debug")
+            manifestPlaceholders["appLabel"] = "CROWNFALL TEST 0.23"
+        }
+        create("play") {
+            dimension = "channel"
+            targetSdk = 36
+            manifestPlaceholders["appLabel"] = "CROWNFALL: Stronghold"
+        }
     }
 
     buildTypes {
         debug {
             isMinifyEnabled = false
-            applicationIdSuffix = ".test"
-            versionNameSuffix = "-test"
-            manifestPlaceholders["appLabel"] = "CROWNFALL DEBUG"
         }
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-        }
-        create("preview") {
-            initWith(getByName("release"))
-            signingConfig = signingConfigs.getByName("debug")
-            applicationIdSuffix = ".preview011"
-            versionNameSuffix = "-preview"
-            isDebuggable = false
-            isMinifyEnabled = false
-            manifestPlaceholders["appLabel"] = "CROWNFALL TEST 0.11"
-            matchingFallbacks += listOf("release")
         }
     }
 
