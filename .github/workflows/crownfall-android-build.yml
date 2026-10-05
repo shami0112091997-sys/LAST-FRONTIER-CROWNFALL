@@ -3,7 +3,7 @@ name: CROWNFALL Android Build
 on:
   workflow_dispatch:
   push:
-    branches: [ "crownfall-v0.8-android" ]
+    branches: [ "main" ]
     paths:
       - "CROWNFALL_Stronghold_Android/**"
       - ".github/workflows/crownfall-android-build.yml"
@@ -20,7 +20,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
@@ -31,12 +31,12 @@ jobs:
           echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
           echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null 2>&1 || true
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 
-      - name: Set up Gradle 8.7
+      - name: Set up Gradle 8.11.1
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: "8.7"
+          gradle-version: "8.11.1"
 
       - name: Build debug APK and release AAB
         working-directory: CROWNFALL_Stronghold_Android
@@ -45,13 +45,13 @@ jobs:
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: CROWNFALL-Stronghold-v0.8-debug-apk
+          name: CROWNFALL-Stronghold-v0.9-debug-apk
           path: CROWNFALL_Stronghold_Android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
 
       - name: Upload release AAB
         uses: actions/upload-artifact@v4
         with:
-          name: CROWNFALL-Stronghold-v0.8-release-aab-unsigned
+          name: CROWNFALL-Stronghold-v0.9-release-aab-unsigned
           path: CROWNFALL_Stronghold_Android/app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: error
