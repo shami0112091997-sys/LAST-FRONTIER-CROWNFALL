@@ -1,0 +1,26 @@
+name: CROWNFALL Android Build
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "CROWNFALL_Stronghold_Android/**"
+      - ".github/workflows/crownfall-android-build.yml"
+jobs:
+  build-debug-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "17" }
+      - uses: android-actions/setup-android@v3
+      - run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with: { gradle-version: "8.7" }
+      - name: Build APK
+        working-directory: CROWNFALL_Stronghold_Android
+        run: gradle :app:assembleDebug --stacktrace
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CROWNFALL-Stronghold-v0.8-debug-apk
+          path: CROWNFALL_Stronghold_Android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
