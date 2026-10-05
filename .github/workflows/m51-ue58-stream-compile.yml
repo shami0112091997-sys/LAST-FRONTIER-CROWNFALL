@@ -1,4 +1,4 @@
-name: M55 UE5.8 Stream Compile - Explicit CoreUObject Test Removal
+name: M56 UE5.8 Stream Compile - Preserve Core Templates
 
 on:
   workflow_dispatch:
@@ -36,7 +36,7 @@ jobs:
           test -f LastFrontier_Build_001/Source/LastFrontier/LastFrontier.cpp
           test -f LastFrontier_Build_001/Source/LastFrontier.Target.cs
           test -f LastFrontier_Build_001/Source/LastFrontierEditor.Target.cs
-          echo "M55_PROJECT_PREFLIGHT=PASS"
+          echo "M56_PROJECT_PREFLIGHT=PASS"
 
       - name: Deep free-space cleanup
         shell: bash
@@ -71,7 +71,7 @@ jobs:
           docker system prune -af --volumes || true
           echo "=== After cleanup ==="
           df -h /
-          echo "M55_CLEANUP=PASS"
+          echo "M56_CLEANUP=PASS"
 
       - name: Setup crane
         uses: imjasonh/setup-crane@v0.7
@@ -84,9 +84,9 @@ jobs:
             -u "${{ secrets.EPIC_GHCR_USER }}" \
             --password-stdin
           crane digest --platform=linux/amd64 "$UE_IMAGE"
-          echo "M55_EPIC_GHCR_LOGIN=PASS"
+          echo "M56_EPIC_GHCR_LOGIN=PASS"
 
-      - name: Stream UnrealEngine and remove CoreUObject tests explicitly
+      - name: Stream UnrealEngine while preserving Core template headers
         shell: bash
         run: |
           set -euo pipefail
@@ -94,14 +94,14 @@ jobs:
           sudo mkdir -p "$UE_ROOT"
           sudo chown "$USER:$USER" "$UE_ROOT"
 
-          echo "Streaming UnrealEngine..."
+          echo "Streaming UnrealEngine while preserving Engine/Source/**/Templates headers..."
           crane export --platform=linux/amd64 "$UE_IMAGE" - | \
             tar -xpf - -C "$UE_ROOT" \
               --wildcards \
               --strip-components=3 \
               --exclude='*/Content/*' \
               --exclude='*/FeaturePacks/*' \
-              --exclude='*/Templates/*' \
+              --exclude='home/ue4/UnrealEngine/Templates/*' \
               --exclude='*/Samples/*' \
               --exclude='home/ue4/UnrealEngine/Engine/DerivedDataCache/*' \
               'home/ue4/UnrealEngine/*'
@@ -120,35 +120,34 @@ jobs:
             local path="$1"
             local label="$2"
             if [ ! -f "$path" ]; then
-              echo "M55_REQUIRED_FILE_MISSING=$label:$path"
+              echo "M56_REQUIRED_FILE_MISSING=$label:$path"
               exit 1
             fi
-            echo "M55_REQUIRED_FILE_PASS=$label"
+            echo "M56_REQUIRED_FILE_PASS=$label"
           }
 
           require_file "$UE_ROOT/Engine/Build/BatchFiles/Linux/Build.sh" "Build.sh"
           require_file "$UE_ROOT/Engine/Binaries/DotNET/UnrealBuildTool/UnrealBuildTool.dll" "UnrealBuildTool.dll"
           require_file "$UE_ROOT/Engine/Source/Developer/DerivedDataCache/DerivedDataCache.Build.cs" "DerivedDataCache.Build.cs"
           require_file "$UE_ROOT/Engine/Source/Editor/Documentation/Documentation.Build.cs" "Documentation.Build.cs"
+          require_file "$UE_ROOT/Engine/Source/Runtime/Core/Public/Templates/UnrealTemplate.h" "UnrealTemplate.h"
 
           if [ -e "$UE_ROOT/Engine/Source/Runtime/CoreUObject/Tests/SubScriptStructOfTest.h" ]; then
-            echo "M55_COREUOBJECT_TEST_REMOVAL=FAIL"
+            echo "M56_COREUOBJECT_TEST_REMOVAL=FAIL"
             exit 1
           fi
 
-          echo "=== Remaining SubScriptStructOf-related files (diagnostic only) ==="
-          find "$UE_ROOT/Engine/Source/Runtime/CoreUObject" -iname '*SubScriptStructOf*' -print || true
-
-          echo "M55_COREUOBJECT_TEST_REMOVAL=PASS"
+          echo "M56_CORE_TEMPLATE_HEADERS=PASS"
+          echo "M56_COREUOBJECT_TEST_REMOVAL=PASS"
           chmod +x "$UE_ROOT/Engine/Build/BatchFiles/Linux/Build.sh"
-          echo "M55_ENGINE_EXTRACT=PASS"
+          echo "M56_ENGINE_EXTRACT=PASS"
 
       - name: Compile LAST FRONTIER directly
         shell: bash
         run: |
           set -euo pipefail
           PROJECT="$GITHUB_WORKSPACE/LastFrontier_Build_001/LastFrontier.uproject"
-          LOG="$GITHUB_WORKSPACE/M55-compile.log"
+          LOG="$GITHUB_WORKSPACE/M56-compile.log"
 
           chmod -R u+rwX "$GITHUB_WORKSPACE/LastFrontier_Build_001"
           cd "$UE_ROOT"
@@ -161,13 +160,13 @@ jobs:
           BUILD_RC=${PIPESTATUS[0]}
           set -e
 
-          echo "M55_BUILD_EXIT_CODE=$BUILD_RC"
+          echo "M56_BUILD_EXIT_CODE=$BUILD_RC"
           if [ "$BUILD_RC" -ne 0 ]; then
             echo "=== Compile tail ==="
-            tail -260 "$LOG" || true
+            tail -320 "$LOG" || true
             exit "$BUILD_RC"
           fi
-          echo "M55_COMPILE_COMMAND=PASS"
+          echo "M56_COMPILE_COMMAND=PASS"
 
       - name: Verify binaries
         shell: bash
@@ -177,18 +176,18 @@ jobs:
           find LastFrontier_Build_001/Binaries -type f -print
           COUNT=$(find LastFrontier_Build_001/Binaries -type f | wc -l)
           if [ "$COUNT" -eq 0 ]; then
-            echo "M55_COMPILE_STATUS=FAIL"
+            echo "M56_COMPILE_STATUS=FAIL"
             exit 1
           fi
-          echo "M55_BINARY_COUNT=$COUNT"
-          echo "M55_COMPILE_STATUS=PASS"
+          echo "M56_BINARY_COUNT=$COUNT"
+          echo "M56_COMPILE_STATUS=PASS"
 
       - name: Upload compile log
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: M55-Compile-Log
-          path: M55-compile.log
+          name: M56-Compile-Log
+          path: M56-compile.log
           if-no-files-found: ignore
           compression-level: 6
 
@@ -196,7 +195,7 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: M55-LastFrontier-Linux-Binaries
+          name: M56-LastFrontier-Linux-Binaries
           path: LastFrontier_Build_001/Binaries
           if-no-files-found: error
           compression-level: 0
