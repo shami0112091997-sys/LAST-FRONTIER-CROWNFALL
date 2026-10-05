@@ -4,14 +4,14 @@ plugins {
 
 android {
     namespace = "com.crownfall.stronghold"
-    compileSdk = 36
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.crownfall.stronghold"
         minSdk = 24
-        targetSdk = 36
-        versionCode = 23
-        versionName = "0.23"
+        targetSdk = 35
+        versionCode = 24
+        versionName = "0.24"
         manifestPlaceholders["appLabel"] = "CROWNFALL: Stronghold"
     }
 
@@ -19,15 +19,14 @@ android {
     productFlavors {
         create("compat") {
             dimension = "channel"
-            applicationIdSuffix = ".preview023"
+            applicationIdSuffix = ".preview024"
             versionNameSuffix = "-preview"
             targetSdk = 35
-            signingConfig = signingConfigs.getByName("debug")
-            manifestPlaceholders["appLabel"] = "CROWNFALL TEST 0.23"
+            manifestPlaceholders["appLabel"] = "CROWNFALL TEST 0.24"
         }
         create("play") {
             dimension = "channel"
-            targetSdk = 36
+            targetSdk = 35
             manifestPlaceholders["appLabel"] = "CROWNFALL: Stronghold"
         }
     }
