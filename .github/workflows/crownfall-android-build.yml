@@ -25,52 +25,81 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Install Android SDK packages
+      - name: Install Android 15 compatibility toolchain
         shell: bash
         run: |
           echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
           echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null 2>&1 || true
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-35" "platforms;android-36" "build-tools;36.0.0"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Set up Gradle 8.11.1
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.11.1"
 
-      - name: Build v0.23 compatibility APK
+      - name: Build v0.24 unsigned compatibility APK
         working-directory: CROWNFALL_Stronghold_Android
         run: gradle :app:assembleCompatRelease --stacktrace
 
-      - name: Build v0.23 Play AAB staging bundle
-        working-directory: CROWNFALL_Stronghold_Android
-        run: gradle :app:bundlePlayRelease --stacktrace
-
-      - name: Verify v0.23 APK
+      - name: Align and sign v0.24 with v1 v2 v3
         shell: bash
         run: |
-          APK="CROWNFALL_Stronghold_Android/app/build/outputs/apk/compat/release/app-compat-release.apk"
-          AAB="CROWNFALL_Stronghold_Android/app/build/outputs/bundle/playRelease/app-play-release.aab"
-          test -f "$APK"
-          test -f "$AAB"
-          unzip -t "$APK"
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK" | tee CROWNFALL_v0.23_APK_Signature_Report.txt
-          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | tee CROWNFALL_v0.23_APK_Badging.txt
-          grep -q "package: name='com.crownfall.stronghold.preview023'" CROWNFALL_v0.23_APK_Badging.txt
-          grep -q "targetSdkVersion:'35'" CROWNFALL_v0.23_APK_Badging.txt
-          grep -q "application-label:'CROWNFALL TEST 0.23'" CROWNFALL_v0.23_APK_Badging.txt
-          sha256sum "$APK" "$AAB" | tee CROWNFALL_v0.23_SHA256.txt
-          cp "$APK" CROWNFALL_Stronghold_v0.23_Android_Test.apk
-          cp "$AAB" CROWNFALL_Stronghold_v0.23_Play_Staging.aab
+          set -euo pipefail
+          BUILD_TOOLS="$ANDROID_HOME/build-tools/35.0.0"
+          UNSIGNED="CROWNFALL_Stronghold_Android/app/build/outputs/apk/compat/release/app-compat-release-unsigned.apk"
+          ALIGNED="$RUNNER_TEMP/CROWNFALL_Stronghold_v0.24_aligned.apk"
+          FINAL="$GITHUB_WORKSPACE/CROWNFALL_Stronghold_v0.24_Android_Compatibility_Test.apk"
+          KEYSTORE="$RUNNER_TEMP/crownfall-v024-test.jks"
+          ALIAS="crownfallv024"
+          CROWNFALL_KS_PASS="$(openssl rand -hex 18)"
+          export CROWNFALL_KS_PASS
 
-      - name: Upload v0.23 Android artifacts
+          test -f "$UNSIGNED"
+          keytool -genkeypair -noprompt \
+            -keystore "$KEYSTORE" \
+            -storepass "$CROWNFALL_KS_PASS" \
+            -keypass "$CROWNFALL_KS_PASS" \
+            -alias "$ALIAS" \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=CROWNFALL Test,O=CROWNFALL,C=US"
+
+          "$BUILD_TOOLS/zipalign" -f -p 4 "$UNSIGNED" "$ALIGNED"
+          "$BUILD_TOOLS/apksigner" sign \
+            --ks "$KEYSTORE" \
+            --ks-key-alias "$ALIAS" \
+            --ks-pass env:CROWNFALL_KS_PASS \
+            --key-pass env:CROWNFALL_KS_PASS \
+            --v1-signing-enabled true \
+            --v2-signing-enabled true \
+            --v3-signing-enabled true \
+            --out "$FINAL" \
+            "$ALIGNED"
+
+          "$BUILD_TOOLS/zipalign" -c -v 4 "$FINAL" | tee CROWNFALL_v0.24_ZipAlign_Report.txt
+          "$BUILD_TOOLS/apksigner" verify --verbose --print-certs "$FINAL" | tee CROWNFALL_v0.24_APK_Signature_Report.txt
+          "$BUILD_TOOLS/aapt" dump badging "$FINAL" | tee CROWNFALL_v0.24_APK_Badging.txt
+          unzip -t "$FINAL" | tee CROWNFALL_v0.24_Zip_Test.txt
+          sha256sum "$FINAL" | tee CROWNFALL_v0.24_SHA256.txt
+
+          grep -q "Verified using v1 scheme (JAR signing): true" CROWNFALL_v0.24_APK_Signature_Report.txt
+          grep -q "Verified using v2 scheme (APK Signature Scheme v2): true" CROWNFALL_v0.24_APK_Signature_Report.txt
+          grep -q "Verified using v3 scheme (APK Signature Scheme v3): true" CROWNFALL_v0.24_APK_Signature_Report.txt
+          grep -q "package: name='com.crownfall.stronghold.preview024'" CROWNFALL_v0.24_APK_Badging.txt
+          grep -q "targetSdkVersion:'35'" CROWNFALL_v0.24_APK_Badging.txt
+          grep -q "application-label:'CROWNFALL TEST 0.24'" CROWNFALL_v0.24_APK_Badging.txt
+
+      - name: Upload v0.24 compatibility APK
         uses: actions/upload-artifact@v4
         with:
-          name: CROWNFALL-Stronghold-v0.23-android
+          name: CROWNFALL-Stronghold-v0.24-compatibility-apk
           path: |
-            CROWNFALL_Stronghold_v0.23_Android_Test.apk
-            CROWNFALL_Stronghold_v0.23_Play_Staging.aab
-            CROWNFALL_v0.23_APK_Signature_Report.txt
-            CROWNFALL_v0.23_APK_Badging.txt
-            CROWNFALL_v0.23_SHA256.txt
+            CROWNFALL_Stronghold_v0.24_Android_Compatibility_Test.apk
+            CROWNFALL_v0.24_ZipAlign_Report.txt
+            CROWNFALL_v0.24_APK_Signature_Report.txt
+            CROWNFALL_v0.24_APK_Badging.txt
+            CROWNFALL_v0.24_Zip_Test.txt
+            CROWNFALL_v0.24_SHA256.txt
           if-no-files-found: error
