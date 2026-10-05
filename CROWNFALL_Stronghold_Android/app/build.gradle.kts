@@ -4,14 +4,14 @@ plugins {
 
 android {
     namespace = "com.crownfall.stronghold"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.crownfall.stronghold"
         minSdk = 24
-        targetSdk = 34
-        versionCode = 8
-        versionName = "0.8"
+        targetSdk = 36
+        versionCode = 9
+        versionName = "0.9"
     }
 
     buildTypes {
