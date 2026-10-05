@@ -1,0 +1,328 @@
+name: M58 UE5.8 Create Map + Build Cook Package
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+    paths:
+      - ".github/workflows/m58-ue58-build-cook-package.yml"
+      - "LastFrontier_Build_001/Source/**"
+      - "LastFrontier_Build_001/LastFrontier.uproject"
+      - "LastFrontier_Build_001/Config/**"
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  build-cook-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    env:
+      UE_IMAGE: ghcr.io/epicgames/unreal-engine:dev-slim-5.8.0
+      UE_ROOT: /tmp/UE58
+      PROJECT_REL: LastFrontier_Build_001/LastFrontier.uproject
+      ARCHIVE_DIR: ${{ github.workspace }}/M58-Packaged
+
+    steps:
+      - name: Checkout LAST FRONTIER
+        uses: actions/checkout@v4
+
+      - name: Verify project and M57 source fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f "$PROJECT_REL"
+          test -f LastFrontier_Build_001/Source/LastFrontier/LastFrontier.Build.cs
+          test -f LastFrontier_Build_001/Source/LastFrontier/LastFrontier.cpp
+          test -f LastFrontier_Build_001/Source/LastFrontier.Target.cs
+          test -f LastFrontier_Build_001/Source/LastFrontierEditor.Target.cs
+          grep -Fq 'ALFGameMode();' LastFrontier_Build_001/Source/LastFrontier/Public/Core/LFGameMode.h
+          echo "M58_PROJECT_PREFLIGHT=PASS"
+
+      - name: Deep free-space cleanup
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "=== Before cleanup ==="
+          df -h /
+          sudo swapoff -a || true
+          sudo rm -f /swapfile || true
+          sudo rm -rf /usr/local/lib/android || true
+          sudo rm -rf /usr/share/dotnet || true
+          sudo rm -rf /opt/ghc /usr/local/.ghcup || true
+          sudo rm -rf /opt/hostedtoolcache || true
+          sudo rm -rf /usr/share/swift || true
+          sudo rm -rf /usr/local/julia* || true
+          sudo rm -rf /usr/local/share/boost || true
+          sudo rm -rf /usr/local/share/powershell || true
+          sudo rm -rf /usr/local/share/vcpkg || true
+          sudo rm -rf /usr/local/share/chromium || true
+          sudo rm -rf /usr/local/share/edge_driver || true
+          sudo rm -rf /usr/local/share/chrome_driver || true
+          sudo rm -rf /usr/local/share/gecko_driver || true
+          sudo rm -rf /usr/lib/jvm || true
+          sudo rm -rf /opt/az /opt/microsoft || true
+          sudo rm -rf /usr/local/aws-cli || true
+          sudo rm -rf /usr/share/miniconda || true
+          sudo rm -rf /usr/local/lib/node_modules || true
+          sudo rm -rf /usr/share/gradle || true
+          sudo rm -rf /usr/local/sqlpackage || true
+          sudo apt-get clean || true
+          sudo rm -rf /var/lib/apt/lists/* || true
+          docker system prune -af --volumes || true
+          echo "=== After cleanup ==="
+          df -h /
+          echo "M58_CLEANUP=PASS"
+
+      - name: Setup crane
+        uses: imjasonh/setup-crane@v0.7
+
+      - name: Login to Epic GHCR with crane
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "${{ secrets.EPIC_GHCR_TOKEN }}" | crane auth login ghcr.io \
+            -u "${{ secrets.EPIC_GHCR_USER }}" \
+            --password-stdin
+          crane digest --platform=linux/amd64 "$UE_IMAGE"
+          echo "M58_EPIC_GHCR_LOGIN=PASS"
+
+      - name: Stream UE5.8 with Engine Content required for Cook
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo rm -rf "$UE_ROOT"
+          sudo mkdir -p "$UE_ROOT"
+          sudo chown "$USER:$USER" "$UE_ROOT"
+
+          echo "Streaming UE5.8 while preserving Engine/Content and Source template headers..."
+          crane export --platform=linux/amd64 "$UE_IMAGE" - | \
+            tar -xpf - -C "$UE_ROOT" \
+              --wildcards \
+              --strip-components=3 \
+              --exclude='home/ue4/UnrealEngine/FeaturePacks/*' \
+              --exclude='home/ue4/UnrealEngine/Templates/*' \
+              --exclude='home/ue4/UnrealEngine/Samples/*' \
+              --exclude='home/ue4/UnrealEngine/Engine/Plugins/*/Content/*' \
+              --exclude='home/ue4/UnrealEngine/Engine/DerivedDataCache/*' \
+              'home/ue4/UnrealEngine/*'
+
+          TEST_DIR="$UE_ROOT/Engine/Source/Runtime/CoreUObject/Tests"
+          if [ -d "$TEST_DIR" ]; then
+            rm -rf "$TEST_DIR"
+          fi
+
+          require_file() {
+            local path="$1"
+            local label="$2"
+            if [ ! -f "$path" ]; then
+              echo "M58_REQUIRED_FILE_MISSING=$label:$path"
+              exit 1
+            fi
+            echo "M58_REQUIRED_FILE_PASS=$label"
+          }
+
+          require_file "$UE_ROOT/Engine/Build/BatchFiles/Linux/Build.sh" "Build.sh"
+          require_file "$UE_ROOT/Engine/Build/BatchFiles/RunUAT.sh" "RunUAT.sh"
+          require_file "$UE_ROOT/Engine/Binaries/DotNET/UnrealBuildTool/UnrealBuildTool.dll" "UnrealBuildTool.dll"
+          require_file "$UE_ROOT/Engine/Source/Developer/DerivedDataCache/DerivedDataCache.Build.cs" "DerivedDataCache.Build.cs"
+          require_file "$UE_ROOT/Engine/Source/Editor/Documentation/Documentation.Build.cs" "Documentation.Build.cs"
+          require_file "$UE_ROOT/Engine/Source/Runtime/Core/Public/Templates/UnrealTemplate.h" "UnrealTemplate.h"
+
+          if [ ! -d "$UE_ROOT/Engine/Content" ]; then
+            echo "M58_ENGINE_CONTENT=FAIL"
+            exit 1
+          fi
+
+          if [ -e "$UE_ROOT/Engine/Source/Runtime/CoreUObject/Tests/SubScriptStructOfTest.h" ]; then
+            echo "M58_COREUOBJECT_TEST_REMOVAL=FAIL"
+            exit 1
+          fi
+
+          chmod +x "$UE_ROOT/Engine/Build/BatchFiles/Linux/Build.sh" "$UE_ROOT/Engine/Build/BatchFiles/RunUAT.sh"
+          du -sh "$UE_ROOT" || true
+          df -h /
+          echo "M58_ENGINE_CONTENT=PASS"
+          echo "M58_ENGINE_EXTRACT=PASS"
+
+      - name: Build LastFrontierEditor
+        shell: bash
+        run: |
+          set -euo pipefail
+          PROJECT="$GITHUB_WORKSPACE/$PROJECT_REL"
+          LOG="$GITHUB_WORKSPACE/M58-editor-compile.log"
+          chmod -R u+rwX "$GITHUB_WORKSPACE/LastFrontier_Build_001"
+          cd "$UE_ROOT"
+
+          set +e
+          Engine/Build/BatchFiles/Linux/Build.sh \
+            LastFrontierEditor Linux Development \
+            "$PROJECT" \
+            -Progress -NoHotReloadFromIDE 2>&1 | tee "$LOG"
+          RC=${PIPESTATUS[0]}
+          set -e
+
+          echo "M58_EDITOR_BUILD_EXIT_CODE=$RC"
+          if [ "$RC" -ne 0 ]; then
+            tail -320 "$LOG" || true
+            exit "$RC"
+          fi
+          echo "M58_EDITOR_BUILD=PASS"
+
+      - name: Enable PythonScriptPlugin in working copy
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          p = Path("LastFrontier_Build_001/LastFrontier.uproject")
+          data = json.loads(p.read_text())
+          plugins = data.setdefault("Plugins", [])
+          found = False
+          for item in plugins:
+              if item.get("Name") == "PythonScriptPlugin":
+                  item["Enabled"] = True
+                  found = True
+          if not found:
+              plugins.append({"Name": "PythonScriptPlugin", "Enabled": True})
+          p.write_text(json.dumps(data, indent=2) + "\n")
+          print("M58_PYTHON_PLUGIN_PATCH=PASS")
+          PY
+
+      - name: Create genuine TestMap.umap with Unreal Editor
+        shell: bash
+        run: |
+          set -euo pipefail
+          PROJECT="$GITHUB_WORKSPACE/$PROJECT_REL"
+          MAP_FILE="$GITHUB_WORKSPACE/LastFrontier_Build_001/Content/Maps/TestMap.umap"
+          SCRIPT="$GITHUB_WORKSPACE/M58_CreateTestMap.py"
+          LOG="$GITHUB_WORKSPACE/M58-create-map.log"
+
+          mkdir -p "$GITHUB_WORKSPACE/LastFrontier_Build_001/Content/Maps"
+          cat > "$SCRIPT" <<'PY'
+          import unreal
+
+          subsystem = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
+          if subsystem is None:
+              raise RuntimeError("LevelEditorSubsystem unavailable")
+          ok = subsystem.new_level("/Game/Maps/TestMap", False)
+          if not ok:
+              raise RuntimeError("LevelEditorSubsystem.new_level returned False")
+          unreal.log("M58_TESTMAP_CREATE=PASS")
+          PY
+
+          EDITOR_CMD="$UE_ROOT/Engine/Binaries/Linux/UnrealEditor-Cmd"
+          if [ ! -x "$EDITOR_CMD" ]; then
+            EDITOR_CMD="$UE_ROOT/Engine/Binaries/Linux/UnrealEditor"
+          fi
+          if [ ! -x "$EDITOR_CMD" ]; then
+            echo "M58_EDITOR_CMD_MISSING"
+            find "$UE_ROOT/Engine/Binaries/Linux" -maxdepth 1 -type f -name 'UnrealEditor*' -print || true
+            exit 1
+          fi
+
+          set +e
+          "$EDITOR_CMD" "$PROJECT" \
+            -run=pythonscript \
+            -script="$SCRIPT" \
+            -unattended -nop4 -nullrhi -nosplash -NoSound \
+            -stdout -FullStdOutLogOutput 2>&1 | tee "$LOG"
+          RC=${PIPESTATUS[0]}
+          set -e
+
+          echo "M58_MAP_COMMAND_EXIT_CODE=$RC"
+          if [ "$RC" -ne 0 ]; then
+            tail -320 "$LOG" || true
+            exit "$RC"
+          fi
+          if [ ! -s "$MAP_FILE" ]; then
+            echo "M58_TESTMAP_FILE=FAIL:$MAP_FILE"
+            tail -320 "$LOG" || true
+            exit 1
+          fi
+          file "$MAP_FILE" || true
+          ls -lh "$MAP_FILE"
+          echo "M58_TESTMAP_FILE=PASS"
+
+      - name: Build Cook Stage Pak Archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          PROJECT="$GITHUB_WORKSPACE/$PROJECT_REL"
+          LOG="$GITHUB_WORKSPACE/M58-package.log"
+          rm -rf "$ARCHIVE_DIR"
+          mkdir -p "$ARCHIVE_DIR"
+          cd "$UE_ROOT"
+
+          set +e
+          Engine/Build/BatchFiles/RunUAT.sh BuildCookRun \
+            -project="$PROJECT" \
+            -noP4 \
+            -build \
+            -cook \
+            -map=/Game/Maps/TestMap \
+            -stage \
+            -pak \
+            -archive \
+            -archivedirectory="$ARCHIVE_DIR" \
+            -platform=Linux \
+            -clientconfig=Development \
+            -unattended \
+            -utf8output 2>&1 | tee "$LOG"
+          RC=${PIPESTATUS[0]}
+          set -e
+
+          echo "M58_PACKAGE_EXIT_CODE=$RC"
+          if [ "$RC" -ne 0 ]; then
+            echo "=== Package tail ==="
+            tail -420 "$LOG" || true
+            exit "$RC"
+          fi
+          echo "M58_BUILDKOOKPACKAGE_COMMAND=PASS"
+
+      - name: Verify packaged runnable artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "=== Packaged files ==="
+          find "$ARCHIVE_DIR" -maxdepth 5 -type f -print | sort
+
+          FILE_COUNT=$(find "$ARCHIVE_DIR" -type f | wc -l)
+          PAK_COUNT=$(find "$ARCHIVE_DIR" -type f -name '*.pak' | wc -l)
+          EXE_COUNT=$(find "$ARCHIVE_DIR" -type f -name 'LastFrontier*' -perm -u+x | wc -l)
+
+          echo "M58_PACKAGE_FILE_COUNT=$FILE_COUNT"
+          echo "M58_PACKAGE_PAK_COUNT=$PAK_COUNT"
+          echo "M58_PACKAGE_EXECUTABLE_COUNT=$EXE_COUNT"
+
+          if [ "$FILE_COUNT" -eq 0 ] || [ "$PAK_COUNT" -eq 0 ] || [ "$EXE_COUNT" -eq 0 ]; then
+            echo "M58_PACKAGE_STATUS=FAIL"
+            exit 1
+          fi
+          echo "M58_PACKAGE_STATUS=PASS"
+
+      - name: Upload M58 logs and generated map
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: M58-Logs-And-TestMap
+          path: |
+            M58-editor-compile.log
+            M58-create-map.log
+            M58-package.log
+            LastFrontier_Build_001/Content/Maps/TestMap.umap
+          if-no-files-found: ignore
+          compression-level: 6
+
+      - name: Upload packaged Linux build
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: M58-LastFrontier-Linux-Package
+          path: M58-Packaged
+          if-no-files-found: error
+          compression-level: 0
