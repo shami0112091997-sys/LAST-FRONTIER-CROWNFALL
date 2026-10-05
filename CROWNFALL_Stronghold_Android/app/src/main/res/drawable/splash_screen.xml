@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/crownfall_bg" />
+    <item>
+        <shape android:shape="rectangle">
+            <gradient android:angle="45" android:startColor="#07121D" android:centerColor="#143244" android:endColor="#351C2A" />
+        </shape>
+    </item>
+    <item android:width="160dp" android:height="160dp" android:gravity="center">
+        <vector android:width="160dp" android:height="160dp" android:viewportWidth="108" android:viewportHeight="108">
+            <path android:fillColor="#E94B64" android:pathData="M54,12 L84,34 L76,82 L54,98 L32,82 L24,34 Z"/>
+            <path android:fillColor="#E7BD5C" android:pathData="M24,35 L31,17 L45,31 L54,11 L63,31 L77,17 L84,35 L78,46 L30,46 Z"/>
+            <path android:fillColor="#66E6FF" android:pathData="M54,38 L69,55 L54,78 L39,55 Z"/>
+        </vector>
+    </item>
+</layer-list>
