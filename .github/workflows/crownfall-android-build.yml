@@ -1,15 +1,10 @@
-name: CROWNFALL Android Build
+name: CROWNFALL Google Play Release
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ "main" ]
-    paths:
-      - "CROWNFALL_Stronghold_Android/**"
-      - ".github/workflows/crownfall-android-build.yml"
 
 jobs:
-  build:
+  google-play-release:
     runs-on: ubuntu-latest
     env:
       ANDROID_HOME: /usr/local/lib/android/sdk
@@ -25,81 +20,77 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Install Android 15 compatibility toolchain
+      - name: Install Android 16 toolchain
         shell: bash
         run: |
           echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
           echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null 2>&1 || true
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 
       - name: Set up Gradle 8.11.1
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.11.1"
 
-      - name: Build v0.24 unsigned compatibility APK
-        working-directory: CROWNFALL_Stronghold_Android
-        run: gradle :app:assembleCompatRelease --stacktrace
-
-      - name: Align and sign v0.24 with v1 v2 v3
+      - name: Assemble production web assets
         shell: bash
         run: |
           set -euo pipefail
-          BUILD_TOOLS="$ANDROID_HOME/build-tools/35.0.0"
-          UNSIGNED="CROWNFALL_Stronghold_Android/app/build/outputs/apk/compat/release/app-compat-release-unsigned.apk"
-          ALIGNED="$RUNNER_TEMP/CROWNFALL_Stronghold_v0.24_aligned.apk"
-          FINAL="$GITHUB_WORKSPACE/CROWNFALL_Stronghold_v0.24_Android_Compatibility_Test.apk"
-          KEYSTORE="$RUNNER_TEMP/crownfall-v024-test.jks"
-          ALIAS="crownfallv024"
-          CROWNFALL_KS_PASS="$(openssl rand -hex 18)"
-          export CROWNFALL_KS_PASS
+          PARTS="CROWNFALL_Stronghold_Android/app/src/main/assets/google_play_parts"
+          TARGET="CROWNFALL_Stronghold_Android/app/src/main/assets/www/index.html"
+          test -d "$PARTS"
+          cat "$PARTS"/part*.txt > "$TARGET"
+          grep -q "CROWNFALL: STRONGHOLD" "$TARGET"
+          grep -q "v1.0" "$TARGET"
+          echo "Production web asset bytes: $(wc -c < "$TARGET")"
 
-          test -f "$UNSIGNED"
-          keytool -genkeypair -noprompt \
-            -keystore "$KEYSTORE" \
-            -storepass "$CROWNFALL_KS_PASS" \
-            -keypass "$CROWNFALL_KS_PASS" \
-            -alias "$ALIAS" \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -dname "CN=CROWNFALL Test,O=CROWNFALL,C=US"
+      - name: Require Google Play upload-key secrets
+        shell: bash
+        env:
+          KEYSTORE_B64: ${{ secrets.CROWNFALL_UPLOAD_KEYSTORE_B64 }}
+          STORE_PASSWORD: ${{ secrets.CROWNFALL_UPLOAD_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.CROWNFALL_UPLOAD_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.CROWNFALL_UPLOAD_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$KEYSTORE_B64"
+          test -n "$STORE_PASSWORD"
+          test -n "$KEY_ALIAS"
+          test -n "$KEY_PASSWORD"
+          KEYSTORE="$RUNNER_TEMP/crownfall-upload.jks"
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$KEYSTORE"
+          test -s "$KEYSTORE"
+          echo "CROWNFALL_KEYSTORE_FILE=$KEYSTORE" >> "$GITHUB_ENV"
+          echo "CROWNFALL_KEYSTORE_PASSWORD=$STORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "CROWNFALL_KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
+          echo "CROWNFALL_KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
 
-          "$BUILD_TOOLS/zipalign" -f -p 4 "$UNSIGNED" "$ALIGNED"
-          "$BUILD_TOOLS/apksigner" sign \
-            --ks "$KEYSTORE" \
-            --ks-key-alias "$ALIAS" \
-            --ks-pass env:CROWNFALL_KS_PASS \
-            --key-pass env:CROWNFALL_KS_PASS \
-            --v1-signing-enabled true \
-            --v2-signing-enabled true \
-            --v3-signing-enabled true \
-            --out "$FINAL" \
-            "$ALIGNED"
+      - name: Build Google Play AAB
+        working-directory: CROWNFALL_Stronghold_Android
+        run: gradle :app:bundleRelease --stacktrace
 
-          "$BUILD_TOOLS/zipalign" -c -v 4 "$FINAL" | tee CROWNFALL_v0.24_ZipAlign_Report.txt
-          "$BUILD_TOOLS/apksigner" verify --verbose --print-certs "$FINAL" | tee CROWNFALL_v0.24_APK_Signature_Report.txt
-          "$BUILD_TOOLS/aapt" dump badging "$FINAL" | tee CROWNFALL_v0.24_APK_Badging.txt
-          unzip -t "$FINAL" | tee CROWNFALL_v0.24_Zip_Test.txt
-          sha256sum "$FINAL" | tee CROWNFALL_v0.24_SHA256.txt
+      - name: Verify Google Play bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          SRC="CROWNFALL_Stronghold_Android/app/build/outputs/bundle/release/app-release.aab"
+          FINAL="$GITHUB_WORKSPACE/CROWNFALL_Stronghold_1.0.0_GooglePlay.aab"
+          test -f "$SRC"
+          cp "$SRC" "$FINAL"
+          jarsigner -verify -verbose -certs "$FINAL" > CROWNFALL_1.0.0_AAB_Signature_Report.txt
+          grep -q "jar verified" CROWNFALL_1.0.0_AAB_Signature_Report.txt
+          unzip -t "$FINAL" > CROWNFALL_1.0.0_AAB_Zip_Test.txt
+          sha256sum "$FINAL" > CROWNFALL_1.0.0_AAB_SHA256.txt
+          echo "CROWNFALL Google Play AAB verified."
 
-          grep -q "Verified using v1 scheme (JAR signing): true" CROWNFALL_v0.24_APK_Signature_Report.txt
-          grep -q "Verified using v2 scheme (APK Signature Scheme v2): true" CROWNFALL_v0.24_APK_Signature_Report.txt
-          grep -q "Verified using v3 scheme (APK Signature Scheme v3): true" CROWNFALL_v0.24_APK_Signature_Report.txt
-          grep -q "package: name='com.crownfall.stronghold.preview024'" CROWNFALL_v0.24_APK_Badging.txt
-          grep -q "targetSdkVersion:'35'" CROWNFALL_v0.24_APK_Badging.txt
-          grep -q "application-label:'CROWNFALL TEST 0.24'" CROWNFALL_v0.24_APK_Badging.txt
-
-      - name: Upload v0.24 compatibility APK
+      - name: Upload Google Play production bundle
         uses: actions/upload-artifact@v4
         with:
-          name: CROWNFALL-Stronghold-v0.24-compatibility-apk
+          name: CROWNFALL-Stronghold-1.0.0-GooglePlay
           path: |
-            CROWNFALL_Stronghold_v0.24_Android_Compatibility_Test.apk
-            CROWNFALL_v0.24_ZipAlign_Report.txt
-            CROWNFALL_v0.24_APK_Signature_Report.txt
-            CROWNFALL_v0.24_APK_Badging.txt
-            CROWNFALL_v0.24_Zip_Test.txt
-            CROWNFALL_v0.24_SHA256.txt
+            CROWNFALL_Stronghold_1.0.0_GooglePlay.aab
+            CROWNFALL_1.0.0_AAB_Signature_Report.txt
+            CROWNFALL_1.0.0_AAB_Zip_Test.txt
+            CROWNFALL_1.0.0_AAB_SHA256.txt
           if-no-files-found: error
