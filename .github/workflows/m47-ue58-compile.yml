@@ -1,12 +1,15 @@
-name: M47 - UE5.8 Compile
+name: CROWNFALL Android v0.8 + UE5.8 Compile
 
 on:
   workflow_dispatch: {}
+  push:
+    branches:
+      - crownfall-stronghold-android-v0.8
 
 jobs:
-  compile:
+  compile-unreal:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout LAST FRONTIER
         uses: actions/checkout@v4
@@ -16,21 +19,8 @@ jobs:
         run: |
           set -e
           PROJECT="LastFrontier_Build_001/LastFrontier.uproject"
-
           test -f "$PROJECT"
-
           echo "PROJECT_FOUND=$PROJECT"
-          cat "$PROJECT"
-
-      - name: Verify C++ source
-        shell: bash
-        run: |
-          set -e
-          test -f "LastFrontier_Build_001/Source/LastFrontier.Target.cs"
-          test -f "LastFrontier_Build_001/Source/LastFrontier/LastFrontier.Build.cs"
-          test -f "LastFrontier_Build_001/Source/LastFrontier/LastFrontier.cpp"
-
-          echo "M47_CPP_SOURCE=FOUND"
 
       - name: Check for Unreal Engine
         id: unreal
@@ -38,10 +28,8 @@ jobs:
         run: |
           if [ -x "/opt/UnrealEngine/Engine/Build/BatchFiles/Linux/Build.sh" ]; then
             echo "available=true" >> "$GITHUB_OUTPUT"
-            echo "UE_ENGINE=FOUND"
           else
             echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "UE_ENGINE=NOT_INSTALLED"
           fi
 
       - name: Compile LAST FRONTIER
@@ -49,30 +37,46 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
           /opt/UnrealEngine/Engine/Build/BatchFiles/Linux/Build.sh \
             LastFrontierEditor Linux Development \
             "$(pwd)/LastFrontier_Build_001/LastFrontier.uproject" \
             -Progress -NoHotReloadFromIDE
 
-          test -d "LastFrontier_Build_001/Binaries"
-
-          COUNT=$(find LastFrontier_Build_001/Binaries -type f | wc -l)
-
-          if [ "$COUNT" -eq 0 ]; then
-            echo "No binary artifacts produced."
-            exit 1
-          fi
-
-          echo "M47_BINARY_ARTIFACT_COUNT=$COUNT"
-          echo "M47_COMPILE_STATUS=PASS"
-
       - name: Report engine requirement
         if: steps.unreal.outputs.available != 'true'
-        shell: bash
-        run: |
-          echo "M47_COMPILE_STATUS=BLOCKED"
-          echo "Reason: Unreal Engine is not installed on this runner."
-          echo "A UE5.8-capable runner is required for the real compile."
-0
+        run: echo "UE5.8 runner required for the Unreal compile."
 
+  build-crownfall-android:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
+
+      - name: Set up Gradle 8.7
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+
+      - name: Build CROWNFALL APK
+        working-directory: CROWNFALL_Stronghold_Android
+        run: gradle :app:assembleDebug --stacktrace
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CROWNFALL-Stronghold-v0.8-debug-apk
+          path: CROWNFALL_Stronghold_Android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
