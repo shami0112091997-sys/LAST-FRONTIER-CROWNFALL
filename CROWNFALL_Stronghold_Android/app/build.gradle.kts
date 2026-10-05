@@ -2,32 +2,39 @@ plugins {
     id("com.android.application")
 }
 
+val releaseKeystore = System.getenv("CROWNFALL_KEYSTORE_FILE")
+val releaseStorePassword = System.getenv("CROWNFALL_KEYSTORE_PASSWORD")
+val releaseKeyAlias = System.getenv("CROWNFALL_KEY_ALIAS")
+val releaseKeyPassword = System.getenv("CROWNFALL_KEY_PASSWORD")
+val hasReleaseSigning = !releaseKeystore.isNullOrBlank() &&
+    !releaseStorePassword.isNullOrBlank() &&
+    !releaseKeyAlias.isNullOrBlank() &&
+    !releaseKeyPassword.isNullOrBlank()
+
 android {
     namespace = "com.crownfall.stronghold"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.crownfall.stronghold"
         minSdk = 23
-        targetSdk = 35
-        versionCode = 24
-        versionName = "0.24"
+        targetSdk = 36
+        versionCode = 100
+        versionName = "1.0.0"
         manifestPlaceholders["appLabel"] = "CROWNFALL: Stronghold"
     }
 
-    flavorDimensions += "channel"
-    productFlavors {
-        create("compat") {
-            dimension = "channel"
-            applicationIdSuffix = ".preview024"
-            versionNameSuffix = "-preview"
-            targetSdk = 35
-            manifestPlaceholders["appLabel"] = "CROWNFALL TEST 0.24"
-        }
-        create("play") {
-            dimension = "channel"
-            targetSdk = 35
-            manifestPlaceholders["appLabel"] = "CROWNFALL: Stronghold"
+    if (hasReleaseSigning) {
+        signingConfigs {
+            create("release") {
+                storeFile = file(releaseKeystore!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+                enableV1Signing = true
+                enableV2Signing = true
+                enableV3Signing = true
+            }
         }
     }
 
@@ -38,6 +45,9 @@ android {
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 
