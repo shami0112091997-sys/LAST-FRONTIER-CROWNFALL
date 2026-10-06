@@ -28,4 +28,10 @@ if [ -z "$PID" ]; then
   exit 1
 fi
 
-echo "CROWNFALL_EMULATOR_SMOKE_PASS PID=$PID"
+if ! grep -q 'CROWNFALL_SMOKE.*DOM="START_OK"' /tmp/crownfall_logcat.txt; then
+  echo "CROWNFALL_DOM_NOT_READY"
+  grep -E "CROWNFALL_SMOKE|chromium|WebView" /tmp/crownfall_logcat.txt | tail -120 || true
+  exit 1
+fi
+
+echo "CROWNFALL_EMULATOR_SMOKE_PASS PID=$PID DOM=START_OK"
