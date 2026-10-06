@@ -7,12 +7,6 @@ PKG="com.crownfall.stronghold"
 test -s "$APK"
 adb install -r "$APK"
 
-# Keep emulator launcher ANR dialogs from covering the game during cold boot.
-adb shell settings put global show_first_crash_dialog 0 || true
-adb shell settings put secure anr_show_background 0 || true
-adb shell am force-stop com.android.launcher3 || true
-adb shell input keyevent 4 || true
-
 adb logcat -c
 adb shell am force-stop "$PKG"
 adb shell am start -W -n "$PKG/.MainActivity" | tee /tmp/crownfall_start.txt
