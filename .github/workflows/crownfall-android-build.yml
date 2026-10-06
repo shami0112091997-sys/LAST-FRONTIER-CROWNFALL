@@ -51,8 +51,12 @@ jobs:
             echo "Preview/test marker found in production game asset."
             exit 1
           fi
-          if grep -Eqi "https?://|firebase|analytics|adsbygoogle|websocket" "$TARGET"; then
+          UNEXPECTED_URLS=$(grep -Eoi 'https?://[^"[:space:]<>)]+' "$TARGET" | grep -Fv 'http://www.w3.org/2000/svg' || true)
+          if [ -n "$UNEXPECTED_URLS" ] || grep -Eqi "firebase|analytics|adsbygoogle|websocket" "$TARGET"; then
             echo "Unexpected network/analytics marker found in offline production asset."
+            if [ -n "$UNEXPECTED_URLS" ]; then
+              echo "$UNEXPECTED_URLS"
+            fi
             exit 1
           fi
           echo "Production game asset validated: $(wc -c < "$TARGET") bytes"
