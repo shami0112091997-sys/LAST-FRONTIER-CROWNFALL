@@ -2,8 +2,4 @@
 <resources>
     <color name="crownfall_bg">#07121D</color>
     <color name="crownfall_ruby">#E94B64</color>
-    <color name="crownfall_coral">#FF7C68</color>
-    <color name="crownfall_phosphor">#7DFF8C</color>
-    <color name="crownfall_cyan">#66E6FF</color>
-    <color name="crownfall_gold">#E7BD5C</color>
 </resources>
