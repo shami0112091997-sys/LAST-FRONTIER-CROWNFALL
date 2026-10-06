@@ -1,6 +1,7 @@
 package com.crownfall.stronghold;
 
 import android.app.Activity;
+import android.content.pm.ApplicationInfo;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -49,7 +50,7 @@ public class MainActivity extends Activity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
-                if (BuildConfig.DEBUG) {
+                if ((getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
                     view.evaluateJavascript(
                         "document.getElementById('start') ? 'START_OK' : 'START_MISSING'",
                         value -> Log.i("CROWNFALL_SMOKE", "DOM=" + value)
