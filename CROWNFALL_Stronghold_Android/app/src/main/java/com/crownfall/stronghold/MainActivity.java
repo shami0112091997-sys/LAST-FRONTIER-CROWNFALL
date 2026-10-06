@@ -14,14 +14,19 @@ public class MainActivity extends Activity {
     private WebView webView;
 
     private void immersive() {
+        View decor = getWindow().getDecorView();
+        if (decor == null) return;
+
         if (android.os.Build.VERSION.SDK_INT >= 30) {
-            WindowInsetsController c = getWindow().getInsetsController();
-            if (c != null) {
-                c.hide(WindowInsets.Type.statusBars() | WindowInsets.Type.navigationBars());
-                c.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+            WindowInsetsController controller = decor.getWindowInsetsController();
+            if (controller != null) {
+                controller.hide(WindowInsets.Type.statusBars() | WindowInsets.Type.navigationBars());
+                controller.setSystemBarsBehavior(
+                    WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                );
             }
         } else {
-            getWindow().getDecorView().setSystemUiVisibility(
+            decor.setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
                 | View.SYSTEM_UI_FLAG_FULLSCREEN
                 | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
@@ -35,7 +40,6 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        immersive();
 
         webView = new WebView(this);
         webView.setBackgroundColor(0xFF061017);
@@ -57,13 +61,16 @@ public class MainActivity extends Activity {
         s.setSupportZoom(false);
 
         webView.loadUrl("file:///android_asset/www/index.html");
+        webView.post(this::immersive);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        immersive();
-        if (webView != null) webView.onResume();
+        if (webView != null) {
+            webView.onResume();
+            webView.post(this::immersive);
+        }
     }
 
     @Override
