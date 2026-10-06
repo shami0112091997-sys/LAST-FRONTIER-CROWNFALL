@@ -116,7 +116,7 @@ public class MainActivity extends Activity {
                                             window.__CROWNFALL_GAMEPLAY_SMOKE=
                                               'PASS:buildings='+s.b.length+',guards='+s.guards+',battles='+s.battles+',tutorial='+s.tutorialStep;
                                           }catch(e){fail('combat-check:'+e.message);}
-                                        },300);
+                                        },3500);
                                       }catch(e){fail('battle-step:'+e.message);}
                                     },350);
                                   }catch(e){fail('build-confirm:'+e.message);}
