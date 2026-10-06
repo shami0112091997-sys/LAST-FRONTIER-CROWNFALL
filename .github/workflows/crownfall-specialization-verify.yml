@@ -1,0 +1,83 @@
+name: CROWNFALL Specialization Verify
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - ".github/workflows/crownfall-specialization-verify.yml"
+
+jobs:
+  verify-specialization:
+    runs-on: ubuntu-latest
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install Android 16 toolchain
+        shell: bash
+        run: |
+          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null 2>&1 || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - name: Validate 1.8 specialization systems
+        shell: bash
+        run: |
+          set -euo pipefail
+          F="CROWNFALL_Stronghold_Android/app/src/main/assets/www/index.html"
+          grep -q "SPECIALS" "$F"
+          grep -q "openSpecialization" "$F"
+          grep -q "chooseSpecialization" "$F"
+          grep -q "steamSkillCost" "$F"
+          grep -q "upgradeDiscount" "$F"
+          grep -q "حرس النخبة" "$F"
+          grep -q "درع الحرس" "$F"
+          grep -q "مدفع اختراقي" "$F"
+          grep -q "عين الأثير" "$F"
+          grep -q "الإصدار 1.8" "$F"
+          grep -q 'versionName = "1.8.0"' CROWNFALL_Stronghold_Android/app/build.gradle.kts
+          grep -q "versionCode = 108" CROWNFALL_Stronghold_Android/app/build.gradle.kts
+
+      - name: Check gameplay JavaScript syntax
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path("CROWNFALL_Stronghold_Android/app/src/main/assets/www/index.html")
+          t=p.read_text(encoding="utf-8")
+          m=re.search(r"<script>(.*)</script>", t, re.S)
+          assert m, "script block missing"
+          js=m.group(1)
+          for marker in ["function openSpecialization","function chooseSpecialization","function steamSkillCost","function upgradeDiscount","function combatTurn"]:
+              assert marker in js, marker
+          Path("/tmp/crownfall-game.js").write_text(js, encoding="utf-8")
+          PY
+          node --check /tmp/crownfall-game.js
+
+      - name: Build release bundle
+        working-directory: CROWNFALL_Stronghold_Android
+        run: gradle :app:bundleRelease --stacktrace
+
+      - name: Verify AAB exists
+        shell: bash
+        run: |
+          test -s CROWNFALL_Stronghold_Android/app/build/outputs/bundle/release/app-release.aab
+          unzip -t CROWNFALL_Stronghold_Android/app/build/outputs/bundle/release/app-release.aab >/dev/null
+
+      - name: Upload verified AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: CROWNFALL-1.8.0-Specialization-Verified-AAB
+          path: CROWNFALL_Stronghold_Android/app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
