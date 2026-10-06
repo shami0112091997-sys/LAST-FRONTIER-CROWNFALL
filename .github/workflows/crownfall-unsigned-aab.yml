@@ -1,0 +1,81 @@
+name: CROWNFALL Unsigned AAB Handoff
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+    paths:
+      - ".github/workflows/crownfall-unsigned-aab.yml"
+
+jobs:
+  build-unsigned-aab:
+    runs-on: ubuntu-latest
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install Android 16 toolchain
+        shell: bash
+        run: |
+          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null 2>&1 || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Set up Gradle 8.11.1
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - name: Validate production game asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          TARGET="CROWNFALL_Stronghold_Android/app/src/main/assets/www/index.html"
+          test -s "$TARGET"
+          grep -q "CROWNFALL: STRONGHOLD" "$TARGET"
+          grep -q "الإصدار 1.0" "$TARGET"
+          grep -q "crownfall_v100_android" "$TARGET"
+          if grep -Eq "CROWNFALL TEST|Android Preview|preview023|crownfall_v023_android" "$TARGET"; then
+            echo "Preview/test marker found in production game asset."
+            exit 1
+          fi
+          if grep -Eqi "https?://|firebase|analytics|adsbygoogle|websocket" "$TARGET"; then
+            echo "Unexpected network/analytics marker found in offline production asset."
+            exit 1
+          fi
+
+      - name: Build unsigned Google Play AAB
+        working-directory: CROWNFALL_Stronghold_Android
+        run: gradle :app:bundleRelease --stacktrace
+
+      - name: Prepare unsigned bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          SRC="CROWNFALL_Stronghold_Android/app/build/outputs/bundle/release/app-release.aab"
+          FINAL="$GITHUB_WORKSPACE/CROWNFALL_Stronghold_1.0.0_Unsigned.aab"
+          test -f "$SRC"
+          cp "$SRC" "$FINAL"
+          unzip -t "$FINAL" > CROWNFALL_1.0.0_Unsigned_Zip_Test.txt
+          sha256sum "$FINAL" > CROWNFALL_1.0.0_Unsigned_SHA256.txt
+
+      - name: Upload unsigned bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: CROWNFALL-Stronghold-1.0.0-Unsigned
+          path: |
+            CROWNFALL_Stronghold_1.0.0_Unsigned.aab
+            CROWNFALL_1.0.0_Unsigned_Zip_Test.txt
+            CROWNFALL_1.0.0_Unsigned_SHA256.txt
+          if-no-files-found: error
