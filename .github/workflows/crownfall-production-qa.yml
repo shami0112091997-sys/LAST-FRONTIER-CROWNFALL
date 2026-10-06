@@ -142,6 +142,9 @@ jobs:
           adb shell dumpsys window | grep -E 'mCurrentFocus|mFocusedApp' | tee /tmp/crownfall_focus.txt || true
           adb shell dumpsys activity activities | grep -E 'mResumedActivity|topResumedActivity' | tee /tmp/crownfall_activity.txt || true
           adb exec-out screencap -p > /tmp/crownfall_before_start.png
+          adb logcat -d > /tmp/crownfall_prestart_logcat.txt || true
+          adb shell uiautomator dump /sdcard/crownfall-ui.xml >/dev/null 2>&1 || true
+          adb pull /sdcard/crownfall-ui.xml /tmp/crownfall_ui.xml >/dev/null 2>&1 || true
           
           python3 -m pip -q install pillow
           python3 - <<'PY'
@@ -156,11 +159,15 @@ jobs:
               raise SystemExit("visual smoke failed: launch screen is blank/uniform")
           PY
           
-          SIZE="$(adb shell wm size | tail -1 | tr -d '\r')"
-          W="$(echo "$SIZE" | sed -E 's/.* ([0-9]+)x([0-9]+)/\1/')"
-          H="$(echo "$SIZE" | sed -E 's/.* ([0-9]+)x([0-9]+)/\2/')"
+          read -r W H < <(python3 - <<'PY'
+          from PIL import Image
+          im=Image.open("/tmp/crownfall_before_start.png")
+          print(im.width, im.height)
+          PY
+          )
           X=$((W/2))
           Y=$((H*58/100))
+          echo "TAP_COORDS=$X,$Y SCREEN=${W}x${H}" | tee /tmp/crownfall_tap.txt
           adb shell input tap "$X" "$Y"
           sleep 5
           adb exec-out screencap -p > /tmp/crownfall_after_start.png
@@ -225,6 +232,9 @@ jobs:
             /tmp/crownfall_activity.txt
             /tmp/crownfall_pid.txt
             /tmp/crownfall_logcat.txt
+            /tmp/crownfall_prestart_logcat.txt
+            /tmp/crownfall_ui.xml
+            /tmp/crownfall_tap.txt
             /tmp/crownfall_meminfo.txt
             /tmp/crownfall_gfxinfo.txt
             /tmp/crownfall_before_start.png
