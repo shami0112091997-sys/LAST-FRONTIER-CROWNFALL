@@ -1,0 +1,81 @@
+name: CROWNFALL Clean 2.1 Final
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - ".github/workflows/crownfall-clean-2.1-final.yml"
+
+jobs:
+  clean-final:
+    runs-on: ubuntu-latest
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install Android 16 toolchain
+        shell: bash
+        run: |
+          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null 2>&1 || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - name: Validate clean production source
+        shell: bash
+        run: |
+          set -euo pipefail
+          H="CROWNFALL_Stronghold_Android/app/src/main/assets/www/index.html"
+          J="CROWNFALL_Stronghold_Android/app/src/main/java/com/crownfall/stronghold/MainActivity.java"
+          G="CROWNFALL_Stronghold_Android/app/build.gradle.kts"
+          grep -q "decor.getWindowInsetsController()" "$J"
+          grep -q "webView.post(this::immersive)" "$J"
+          ! grep -q "CROWNFALL_GAMEPLAY_SMOKE" "$J"
+          ! grep -q "CROWNFALL_SMOKE" "$J"
+          grep -q "الإصدار 2.1" "$H"
+          grep -q 'versionName = "2.1.0"' "$G"
+          grep -q "versionCode = 210" "$G"
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          t=Path("CROWNFALL_Stronghold_Android/app/src/main/assets/www/index.html").read_text(encoding="utf-8")
+          m=re.search(r"<script>(.*)</script>", t, re.S)
+          assert m
+          Path("/tmp/crownfall-clean.js").write_text(m.group(1), encoding="utf-8")
+          PY
+          node --check /tmp/crownfall-clean.js
+
+      - name: Build clean release APK and AAB
+        working-directory: CROWNFALL_Stronghold_Android
+        run: gradle :app:assembleRelease :app:bundleRelease --stacktrace
+
+      - name: Verify clean artifacts
+        shell: bash
+        run: |
+          APK="CROWNFALL_Stronghold_Android/app/build/outputs/apk/release/app-release-unsigned.apk"
+          AAB="CROWNFALL_Stronghold_Android/app/build/outputs/bundle/release/app-release.aab"
+          test -s "$APK"
+          test -s "$AAB"
+          unzip -t "$APK" >/dev/null
+          unzip -t "$AAB" >/dev/null
+          sha256sum "$APK" "$AAB"
+
+      - name: Upload clean release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: CROWNFALL-2.1.0-CleanFinal
+          path: |
+            CROWNFALL_Stronghold_Android/app/build/outputs/apk/release/app-release-unsigned.apk
+            CROWNFALL_Stronghold_Android/app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
