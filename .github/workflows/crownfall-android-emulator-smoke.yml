@@ -4,7 +4,7 @@ on:
   push:
     branches: [ "main" ]
     paths:
-      - ".github/workflows/crownfall-android-emulator-smoke.yml"
+      - ".github/workflows/crownfall-android-emulator-smoke.yml"\n      - "CROWNFALL_Stronghold_Android/emulator_smoke.sh"
 
 jobs:
   emulator-smoke:
