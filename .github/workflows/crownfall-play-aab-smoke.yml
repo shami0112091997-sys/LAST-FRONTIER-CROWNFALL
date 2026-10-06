@@ -5,6 +5,7 @@ on:
     branches: [ "main" ]
     paths:
       - ".github/workflows/crownfall-play-aab-smoke.yml"
+      - "CROWNFALL_Stronghold_Android/play_aab_smoke.sh"
 
 jobs:
   play-aab-smoke:
