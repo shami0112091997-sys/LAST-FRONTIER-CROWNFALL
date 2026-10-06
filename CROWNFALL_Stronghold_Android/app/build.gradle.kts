@@ -19,8 +19,8 @@ android {
         applicationId = "com.crownfall.stronghold"
         minSdk = 23
         targetSdk = 36
-        versionCode = 104
-        versionName = "1.4.0"
+        versionCode = 105
+        versionName = "1.5.0"
         manifestPlaceholders["appLabel"] = "CROWNFALL: Stronghold"
     }
 
