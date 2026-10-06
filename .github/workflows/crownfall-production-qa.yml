@@ -134,6 +134,11 @@ jobs:
           adb shell svc power stayon true || true
           adb shell settings put system screen_off_timeout 2147483647 || true
           adb shell settings put secure immersive_mode_confirmations confirmed || true
+          # Headless AVD launchers can ANR during cold boot and cover the app with a system dialog.
+          # Suppress system error dialogs; app ANR/crash detection remains enforced from logcat below.
+          adb shell settings put global hide_error_dialogs 1 || true
+          adb shell am force-stop com.android.launcher3 || true
+          sleep 2
           adb logcat -c
           adb shell am force-stop "$PKG"
           adb shell am start -W -n "$PKG/.MainActivity" | tee /tmp/crownfall_start.txt
@@ -141,6 +146,11 @@ jobs:
           
           adb shell dumpsys window | grep -E 'mCurrentFocus|mFocusedApp' | tee /tmp/crownfall_focus.txt || true
           adb shell dumpsys activity activities | grep -E 'mResumedActivity|topResumedActivity' | tee /tmp/crownfall_activity.txt || true
+          if ! grep -q "com.crownfall.stronghold/.MainActivity" /tmp/crownfall_activity.txt; then
+            echo "CROWNFALL_NOT_TOP_RESUMED"
+            adb shell dumpsys window | grep -E "mCurrentFocus|mFocusedApp" || true
+            exit 1
+          fi
           adb exec-out screencap -p > /tmp/crownfall_before_start.png
           adb logcat -d > /tmp/crownfall_prestart_logcat.txt || true
           adb shell uiautomator dump /sdcard/crownfall-ui.xml >/dev/null 2>&1 || true
