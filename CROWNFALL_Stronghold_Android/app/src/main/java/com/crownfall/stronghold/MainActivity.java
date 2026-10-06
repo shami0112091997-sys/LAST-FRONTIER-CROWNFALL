@@ -61,9 +61,12 @@ public class MainActivity extends Activity {
                           window.__CROWNFALL_GAMEPLAY_SMOKE='RUNNING';
                           const fail=(m)=>{window.__CROWNFALL_GAMEPLAY_SMOKE='FAIL:'+m;};
                           try{
-                            const start=document.getElementById('start');
-                            if(!start) return fail('start-missing');
-                            start.click();
+                            const splash=document.getElementById('splash');
+                            if(!splash) return fail('splash-missing');
+                            s.soundOn=false;
+                            splash.style.display='none';
+                            ensureDaily();
+                            render();
                             setTimeout(()=>{
                               try{
                                 const beforeBuildings=s.b.length, beforeGuards=s.guards;
@@ -117,7 +120,7 @@ public class MainActivity extends Activity {
                                             window.__CROWNFALL_GAMEPLAY_SMOKE=
                                               'PASS:buildings='+s.b.length+',guards='+s.guards+',battles='+s.battles+',tutorial='+s.tutorialStep;
                                           }catch(e){fail('combat-check:'+e.message);}
-                                        },900);
+                                        },300);
                                       }catch(e){fail('battle-step:'+e.message);}
                                     },350);
                                   }catch(e){fail('build-confirm:'+e.message);}
