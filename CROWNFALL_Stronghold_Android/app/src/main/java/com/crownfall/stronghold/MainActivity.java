@@ -88,11 +88,7 @@ public class MainActivity extends Activity {
                                 }
                                 if(!pt) return fail('no-build-space');
 
-                                mapEl.dispatchEvent(new MouseEvent('click',{
-                                  bubbles:true,
-                                  clientX:r.left+r.width*pt.x/100,
-                                  clientY:r.top+r.height*pt.y/100
-                                }));
+                                previewBuild(s.selected,pt.x,pt.y);
 
                                 setTimeout(()=>{
                                   try{
