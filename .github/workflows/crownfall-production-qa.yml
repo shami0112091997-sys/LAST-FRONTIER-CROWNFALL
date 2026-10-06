@@ -1,0 +1,228 @@
+name: CROWNFALL 2.1.2 Production QA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "CROWNFALL_Stronghold_Android/**"
+      - "google-play/**"
+      - ".github/workflows/crownfall-production-qa.yml"
+
+jobs:
+  production-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install Android 16 toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null 2>&1 || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Set up Gradle 8.11.1
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - name: Static production assertions
+        shell: bash
+        run: |
+          set -euo pipefail
+          G="CROWNFALL_Stronghold_Android/app/build.gradle.kts"
+          M="CROWNFALL_Stronghold_Android/app/src/main/AndroidManifest.xml"
+          H="CROWNFALL_Stronghold_Android/app/src/main/assets/www/index.html"
+          P="google-play/privacy-policy.html"
+
+          grep -q 'applicationId = "com.crownfall.stronghold"' "$G"
+          grep -q 'versionCode = 212' "$G"
+          grep -q 'versionName = "2.1.2"' "$G"
+          grep -q 'compileSdk = 36' "$G"
+          grep -q 'targetSdk = 36' "$G"
+          grep -q 'minSdk = 23' "$G"
+          grep -q 'android:testOnly="false"' "$M"
+          ! grep -q 'android.permission.INTERNET' "$M"
+          ! grep -Eqi 'Phone Test|DebugPhone|PhonePreview|Android Preview|CROWNFALL TEST|preview023|2\.1\.0|2\.1\.1' "$H"
+          ! grep -Eqi 'firebase|analytics|adsbygoogle|websocket|XMLHttpRequest|fetch[[:space:]]*\(' "$H"
+
+          grep -q 'CROWNFALL: Stronghold' "$P"
+          grep -qi 'Data collection and sharing' "$P"
+          grep -qi 'Local game data' "$P"
+          grep -qi 'Contact' "$P"
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, sys
+          h = Path("CROWNFALL_Stronghold_Android/app/src/main/assets/www/index.html").read_text(encoding="utf-8")
+          ids = re.findall(r'\bid=["\']([^"\']+)["\']', h)
+          if len(ids) != len(set(ids)):
+              raise SystemExit("duplicate HTML ids")
+          refs = re.findall(r'\$\(\s*["\']([^"\']+)["\']\s*\)', h)
+          missing = sorted(set(refs)-set(ids))
+          if missing:
+              raise SystemExit("missing DOM ids: "+", ".join(missing))
+          urls = [u for u in re.findall(r'https?://[^"\'<>\s)]+', h) if u != "http://www.w3.org/2000/svg"]
+          if urls:
+              raise SystemExit("unexpected external URL(s): "+", ".join(sorted(set(urls))))
+          m = re.search(r'<script(?:\s[^>]*)?>([\s\S]*?)</script>', h, re.I)
+          if not m:
+              raise SystemExit("inline game script missing")
+          Path("/tmp/crownfall-inline.js").write_text(m.group(1), encoding="utf-8")
+          print("HTML/static assertions PASS", len(h), "bytes", len(ids), "ids")
+          PY
+          node --check /tmp/crownfall-inline.js
+
+      - name: Android lint
+        working-directory: CROWNFALL_Stronghold_Android
+        run: gradle :app:lintRelease --stacktrace
+
+      - name: Build production AAB source
+        working-directory: CROWNFALL_Stronghold_Android
+        run: gradle :app:bundleRelease --stacktrace
+
+      - name: Validate AAB and create AAB-derived APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          AAB="CROWNFALL_Stronghold_Android/app/build/outputs/bundle/release/app-release.aab"
+          test -s "$AAB"
+          unzip -t "$AAB" >/tmp/crownfall_aab_zip_test.txt
+          curl -L --fail --retry 3 -o /tmp/bundletool.jar https://github.com/google/bundletool/releases/download/1.18.2/bundletool-all-1.18.2.jar
+          java -jar /tmp/bundletool.jar validate --bundle="$AAB" | tee /tmp/crownfall_bundletool_validate.txt
+
+          keytool -genkeypair -v -keystore /tmp/crownfall-qa.jks -storepass android -alias crownfall-qa -keypass android -keyalg RSA -keysize 2048 -validity 30 -dname "CN=CROWNFALL Production QA,O=CI,C=US"
+          java -jar /tmp/bundletool.jar build-apks --bundle="$AAB" --output=/tmp/crownfall-qa.apks --mode=universal --ks=/tmp/crownfall-qa.jks --ks-key-alias=crownfall-qa --ks-pass=pass:android --key-pass=pass:android
+          unzip -p /tmp/crownfall-qa.apks universal.apk > /tmp/CROWNFALL-2.1.2-QA-universal.apk
+          test -s /tmp/CROWNFALL-2.1.2-QA-universal.apk
+
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose /tmp/CROWNFALL-2.1.2-QA-universal.apk
+          "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging /tmp/CROWNFALL-2.1.2-QA-universal.apk | tee /tmp/crownfall_badging.txt
+          "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump permissions /tmp/CROWNFALL-2.1.2-QA-universal.apk | tee /tmp/crownfall_permissions.txt
+
+          grep -q "package: name='com.crownfall.stronghold' versionCode='212' versionName='2.1.2'" /tmp/crownfall_badging.txt
+          grep -q "targetSdkVersion:'36'" /tmp/crownfall_badging.txt
+          ! grep -q "android.permission.INTERNET" /tmp/crownfall_permissions.txt
+          sha256sum "$AAB" | tee /tmp/crownfall_unsigned_source_aab_sha256.txt
+
+      - name: Enable KVM
+        shell: bash
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Runtime + visual smoke from AAB
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: default
+          arch: x86_64
+          profile: pixel_2
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot-save
+          disable-animations: true
+          script: |
+            set -euo pipefail
+            PKG="com.crownfall.stronghold"
+            APK="/tmp/CROWNFALL-2.1.2-QA-universal.apk"
+
+            adb install -r "$APK"
+            adb shell input keyevent KEYCODE_WAKEUP || true
+            adb shell wm dismiss-keyguard || true
+            adb shell svc power stayon true || true
+            adb shell settings put system screen_off_timeout 2147483647 || true
+            adb shell settings put secure immersive_mode_confirmations confirmed || true
+            adb logcat -c
+            adb shell am force-stop "$PKG"
+            adb shell am start -W -n "$PKG/.MainActivity" | tee /tmp/crownfall_start.txt
+            sleep 12
+
+            adb shell dumpsys window | grep -E 'mCurrentFocus|mFocusedApp' | tee /tmp/crownfall_focus.txt || true
+            adb shell dumpsys activity activities | grep -E 'mResumedActivity|topResumedActivity' | tee /tmp/crownfall_activity.txt || true
+            adb exec-out screencap -p > /tmp/crownfall_before_start.png
+
+            python3 -m pip -q install pillow
+            python3 - <<'PY'
+            from PIL import Image
+            p="/tmp/crownfall_before_start.png"
+            im=Image.open(p).convert("RGB")
+            ext=im.getextrema()
+            colors=im.resize((240,135)).getcolors(maxcolors=240*135)
+            unique=len(colors or [])
+            print("BEFORE_SCREEN", im.size, "extrema", ext, "sample_unique", unique)
+            if all(lo==hi for lo,hi in ext) or unique < 12:
+                raise SystemExit("visual smoke failed: launch screen is blank/uniform")
+            PY
+
+            SIZE="$(adb shell wm size | tail -1 | tr -d '\r')"
+            W="$(echo "$SIZE" | sed -E 's/.* ([0-9]+)x([0-9]+)/\1/')"
+            H="$(echo "$SIZE" | sed -E 's/.* ([0-9]+)x([0-9]+)/\2/')"
+            X=$((W/2))
+            Y=$((H*58/100))
+            adb shell input tap "$X" "$Y"
+            sleep 5
+            adb exec-out screencap -p > /tmp/crownfall_after_start.png
+            adb shell pidof "$PKG" | tee /tmp/crownfall_pid.txt
+            adb logcat -d > /tmp/crownfall_logcat.txt
+            adb shell dumpsys meminfo "$PKG" > /tmp/crownfall_meminfo.txt || true
+            adb shell dumpsys gfxinfo "$PKG" > /tmp/crownfall_gfxinfo.txt || true
+
+            python3 - <<'PY'
+            from PIL import Image, ImageChops
+            a=Image.open("/tmp/crownfall_before_start.png").convert("RGB")
+            b=Image.open("/tmp/crownfall_after_start.png").convert("RGB")
+            ext=b.getextrema()
+            colors=b.resize((240,135)).getcolors(maxcolors=240*135)
+            unique=len(colors or [])
+            diff=ImageChops.difference(a,b).getbbox()
+            print("AFTER_SCREEN", b.size, "extrema", ext, "sample_unique", unique, "changed", bool(diff))
+            if all(lo==hi for lo,hi in ext) or unique < 12:
+                raise SystemExit("visual smoke failed: post-start screen is blank/uniform")
+            if not diff:
+                raise SystemExit("visual smoke failed: Start tap did not change the rendered screen")
+            PY
+
+            if grep -E "FATAL EXCEPTION|AndroidRuntime.*FATAL|ANR in com\.crownfall\.stronghold|Uncaught (TypeError|ReferenceError|SyntaxError)|\[ERROR:CONSOLE" /tmp/crownfall_logcat.txt; then
+              echo "Runtime error detected"
+              exit 1
+            fi
+            test -n "$(cat /tmp/crownfall_pid.txt)"
+
+      - name: Upload QA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: CROWNFALL-2.1.2-Production-QA-Evidence
+          path: |
+            /tmp/crownfall_badging.txt
+            /tmp/crownfall_permissions.txt
+            /tmp/crownfall_bundletool_validate.txt
+            /tmp/crownfall_aab_zip_test.txt
+            /tmp/crownfall_unsigned_source_aab_sha256.txt
+            /tmp/crownfall_start.txt
+            /tmp/crownfall_focus.txt
+            /tmp/crownfall_activity.txt
+            /tmp/crownfall_pid.txt
+            /tmp/crownfall_logcat.txt
+            /tmp/crownfall_meminfo.txt
+            /tmp/crownfall_gfxinfo.txt
+            /tmp/crownfall_before_start.png
+            /tmp/crownfall_after_start.png
+            CROWNFALL_Stronghold_Android/app/build/reports/lint-results-release.html
+            CROWNFALL_Stronghold_Android/app/build/reports/lint-results-release.txt
+          if-no-files-found: warn
