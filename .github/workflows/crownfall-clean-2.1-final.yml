@@ -1,4 +1,4 @@
-name: CROWNFALL Clean 2.1 Final
+name: CROWNFALL Clean 2.1.1 Final
 
 on:
   push:
@@ -44,8 +44,8 @@ jobs:
           ! grep -q "CROWNFALL_GAMEPLAY_SMOKE" "$J"
           ! grep -q "CROWNFALL_SMOKE" "$J"
           grep -q "الإصدار 2.1" "$H"
-          grep -q 'versionName = "2.1.0"' "$G"
-          grep -q "versionCode = 210" "$G"
+          grep -q 'versionName = "2.1.1"' "$G"
+          grep -q "versionCode = 211" "$G"
           python - <<'PY'
           from pathlib import Path
           import re
@@ -74,7 +74,7 @@ jobs:
       - name: Upload clean release artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: CROWNFALL-2.1.0-CleanFinal
+          name: CROWNFALL-2.1.1-CleanFinal
           path: |
             CROWNFALL_Stronghold_Android/app/build/outputs/apk/release/app-release-unsigned.apk
             CROWNFALL_Stronghold_Android/app/build/outputs/bundle/release/app-release.aab
