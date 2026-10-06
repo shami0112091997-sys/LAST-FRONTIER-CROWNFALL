@@ -45,7 +45,7 @@ jobs:
           TARGET="CROWNFALL_Stronghold_Android/app/src/main/assets/www/index.html"
           test -s "$TARGET"
           grep -q "CROWNFALL: STRONGHOLD" "$TARGET"
-          grep -q "الإصدار 1.2" "$TARGET"
+          grep -q "الإصدار 1.3" "$TARGET"
           grep -q "crownfall_v100_android" "$TARGET"
           if grep -Eq "CROWNFALL TEST|Android Preview|preview023|crownfall_v023_android" "$TARGET"; then
             echo "Preview/test marker found in production game asset."
@@ -87,22 +87,22 @@ jobs:
         run: |
           set -euo pipefail
           SRC="CROWNFALL_Stronghold_Android/app/build/outputs/bundle/release/app-release.aab"
-          FINAL="$GITHUB_WORKSPACE/CROWNFALL_Stronghold_1.2.0_GooglePlay.aab"
+          FINAL="$GITHUB_WORKSPACE/CROWNFALL_Stronghold_1.3.0_GooglePlay.aab"
           test -f "$SRC"
           cp "$SRC" "$FINAL"
-          jarsigner -verify -verbose -certs "$FINAL" > CROWNFALL_1.2.0_AAB_Signature_Report.txt
-          grep -q "jar verified" CROWNFALL_1.2.0_AAB_Signature_Report.txt
-          unzip -t "$FINAL" > CROWNFALL_1.2.0_AAB_Zip_Test.txt
-          sha256sum "$FINAL" > CROWNFALL_1.2.0_AAB_SHA256.txt
+          jarsigner -verify -verbose -certs "$FINAL" > CROWNFALL_1.3.0_AAB_Signature_Report.txt
+          grep -q "jar verified" CROWNFALL_1.3.0_AAB_Signature_Report.txt
+          unzip -t "$FINAL" > CROWNFALL_1.3.0_AAB_Zip_Test.txt
+          sha256sum "$FINAL" > CROWNFALL_1.3.0_AAB_SHA256.txt
           echo "CROWNFALL Google Play AAB verified."
 
       - name: Upload Google Play production bundle
         uses: actions/upload-artifact@v4
         with:
-          name: CROWNFALL-Stronghold-1.2.0-GooglePlay
+          name: CROWNFALL-Stronghold-1.3.0-GooglePlay
           path: |
-            CROWNFALL_Stronghold_1.2.0_GooglePlay.aab
-            CROWNFALL_1.2.0_AAB_Signature_Report.txt
-            CROWNFALL_1.2.0_AAB_Zip_Test.txt
-            CROWNFALL_1.2.0_AAB_SHA256.txt
+            CROWNFALL_Stronghold_1.3.0_GooglePlay.aab
+            CROWNFALL_1.3.0_AAB_Signature_Report.txt
+            CROWNFALL_1.3.0_AAB_Zip_Test.txt
+            CROWNFALL_1.3.0_AAB_SHA256.txt
           if-no-files-found: error
