@@ -6,6 +6,7 @@ on:
     paths:
       - ".github/workflows/crownfall-android-emulator-smoke.yml"
       - "CROWNFALL_Stronghold_Android/emulator_smoke.sh"
+      - "CROWNFALL_Stronghold_Android/app/src/main/java/com/crownfall/stronghold/MainActivity.java"
 
 jobs:
   emulator-smoke:
