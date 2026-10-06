@@ -5,6 +5,7 @@ PKG="com.crownfall.stronghold"
 APK="/tmp/CROWNFALL-2.1.2-universal.apk"
 
 adb install -r "$APK"
+adb shell settings put secure immersive_mode_confirmations confirmed || true
 adb logcat -c
 adb shell am force-stop "$PKG"
 adb shell am start -W -n "$PKG/.MainActivity" | tee /tmp/crownfall_start.txt
