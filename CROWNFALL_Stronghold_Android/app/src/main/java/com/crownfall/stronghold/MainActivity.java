@@ -2,6 +2,7 @@ package com.crownfall.stronghold;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
@@ -44,7 +45,18 @@ public class MainActivity extends Activity {
         webView = new WebView(this);
         webView.setBackgroundColor(0xFF061017);
         setContentView(webView);
-        webView.setWebViewClient(new WebViewClient());
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                if (BuildConfig.DEBUG) {
+                    view.evaluateJavascript(
+                        "document.getElementById('start') ? 'START_OK' : 'START_MISSING'",
+                        value -> Log.i("CROWNFALL_SMOKE", "DOM=" + value)
+                    );
+                }
+            }
+        });
         webView.setWebChromeClient(new WebChromeClient());
 
         WebSettings s = webView.getSettings();
