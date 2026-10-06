@@ -1,0 +1,15 @@
+الإصدار 2.1.2
+• تحسين تجربة البداية والتعليم داخل اللعبة.
+• إصلاح مشكلة تشغيل Android التي كانت قد تسبب إغلاق التطبيق عند الفتح.
+• تحسين البناء والأحياء والتخصصات الملكية وزخم التاج.
+• تحسينات للصوت وردود الفعل والقتال.
+• إضافة بيان خصوصية واضح داخل اللعبة.
+• لا إعلانات، لا حسابات، واللعبة تعمل دون اتصال بالإنترنت.
+
+Version 2.1.2
+• Improved onboarding and first-session flow.
+• Fixed an Android startup crash.
+• Polished building, districts, royal specializations, and Crown Momentum.
+• Improved sound, feedback, and combat flow.
+• Added an in-app privacy disclosure.
+• No ads, accounts, analytics, or required network connection.
