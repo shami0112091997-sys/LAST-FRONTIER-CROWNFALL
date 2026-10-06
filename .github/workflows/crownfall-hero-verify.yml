@@ -37,6 +37,9 @@ jobs:
           grep -q "addHeroXp" "$F"
           grep -q "نبضة التاج" "$F"
           grep -q "الليدي إمبر" "$F"
+          grep -q "الإصدار 1.1" "$F"
+          grep -q 'versionName = "1.1.0"' CROWNFALL_Stronghold_Android/app/build.gradle.kts
+          grep -q "versionCode = 101" CROWNFALL_Stronghold_Android/app/build.gradle.kts
       - name: Build release bundle
         working-directory: CROWNFALL_Stronghold_Android
         run: gradle :app:bundleRelease --stacktrace
