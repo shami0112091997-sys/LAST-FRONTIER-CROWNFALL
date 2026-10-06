@@ -45,3 +45,10 @@ jobs:
         run: |
           test -s CROWNFALL_Stronghold_Android/app/build/outputs/bundle/release/app-release.aab
           unzip -t CROWNFALL_Stronghold_Android/app/build/outputs/bundle/release/app-release.aab >/dev/null
+
+      - name: Upload verified AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: CROWNFALL-Gameplay-Verified-AAB
+          path: CROWNFALL_Stronghold_Android/app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
