@@ -1,4 +1,4 @@
-name: M58 UE5.8 Create Map + Build Cook Package
+name: M59 UE5.8 Preserve Plugin Content + Build Cook Package
 
 on:
   workflow_dispatch:
@@ -89,7 +89,7 @@ jobs:
           crane digest --platform=linux/amd64 "$UE_IMAGE"
           echo "M58_EPIC_GHCR_LOGIN=PASS"
 
-      - name: Stream UE5.8 with Engine Content required for Cook
+      - name: Stream UE5.8 with Engine and Plugin Content required for Cook
         shell: bash
         run: |
           set -euo pipefail
@@ -105,7 +105,6 @@ jobs:
               --exclude='home/ue4/UnrealEngine/FeaturePacks/*' \
               --exclude='home/ue4/UnrealEngine/Templates/*' \
               --exclude='home/ue4/UnrealEngine/Samples/*' \
-              --exclude='home/ue4/UnrealEngine/Engine/Plugins/*/Content/*' \
               --exclude='home/ue4/UnrealEngine/Engine/DerivedDataCache/*' \
               'home/ue4/UnrealEngine/*'
 
@@ -132,9 +131,17 @@ jobs:
           require_file "$UE_ROOT/Engine/Source/Runtime/Core/Public/Templates/UnrealTemplate.h" "UnrealTemplate.h"
 
           if [ ! -d "$UE_ROOT/Engine/Content" ]; then
-            echo "M58_ENGINE_CONTENT=FAIL"
+            echo "M59_ENGINE_CONTENT=FAIL"
             exit 1
           fi
+
+          PLUGIN_CONTENT_COUNT=$(find "$UE_ROOT/Engine/Plugins" -type d -name Content | wc -l)
+          echo "M59_PLUGIN_CONTENT_DIRS=$PLUGIN_CONTENT_COUNT"
+          if [ "$PLUGIN_CONTENT_COUNT" -eq 0 ]; then
+            echo "M59_PLUGIN_CONTENT=FAIL"
+            exit 1
+          fi
+          echo "M59_PLUGIN_CONTENT=PASS"
 
           if [ -e "$UE_ROOT/Engine/Source/Runtime/CoreUObject/Tests/SubScriptStructOfTest.h" ]; then
             echo "M58_COREUOBJECT_TEST_REMOVAL=FAIL"
@@ -144,8 +151,8 @@ jobs:
           chmod +x "$UE_ROOT/Engine/Build/BatchFiles/Linux/Build.sh" "$UE_ROOT/Engine/Build/BatchFiles/RunUAT.sh"
           du -sh "$UE_ROOT" || true
           df -h /
-          echo "M58_ENGINE_CONTENT=PASS"
-          echo "M58_ENGINE_EXTRACT=PASS"
+          echo "M59_ENGINE_CONTENT=PASS"
+          echo "M59_ENGINE_EXTRACT=PASS"
 
       - name: Build LastFrontierEditor
         shell: bash
