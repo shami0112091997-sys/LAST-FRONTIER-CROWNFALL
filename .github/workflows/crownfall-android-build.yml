@@ -2,11 +2,6 @@ name: CROWNFALL Google Play Release
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ "main" ]
-    paths:
-      - "CROWNFALL_Stronghold_Android/**"
-      - ".github/workflows/crownfall-android-build.yml"
 
 jobs:
   google-play-release:
