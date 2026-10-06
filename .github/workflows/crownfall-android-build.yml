@@ -87,22 +87,22 @@ jobs:
         run: |
           set -euo pipefail
           SRC="CROWNFALL_Stronghold_Android/app/build/outputs/bundle/release/app-release.aab"
-          FINAL="$GITHUB_WORKSPACE/CROWNFALL_Stronghold_2.1.0_GooglePlay.aab"
+          FINAL="$GITHUB_WORKSPACE/CROWNFALL_Stronghold_2.1.1_GooglePlay.aab"
           test -f "$SRC"
           cp "$SRC" "$FINAL"
-          jarsigner -verify -verbose -certs "$FINAL" > CROWNFALL_2.1.0_AAB_Signature_Report.txt
-          grep -q "jar verified" CROWNFALL_2.1.0_AAB_Signature_Report.txt
-          unzip -t "$FINAL" > CROWNFALL_2.1.0_AAB_Zip_Test.txt
-          sha256sum "$FINAL" > CROWNFALL_2.1.0_AAB_SHA256.txt
+          jarsigner -verify -verbose -certs "$FINAL" > CROWNFALL_2.1.1_AAB_Signature_Report.txt
+          grep -q "jar verified" CROWNFALL_2.1.1_AAB_Signature_Report.txt
+          unzip -t "$FINAL" > CROWNFALL_2.1.1_AAB_Zip_Test.txt
+          sha256sum "$FINAL" > CROWNFALL_2.1.1_AAB_SHA256.txt
           echo "CROWNFALL Google Play AAB verified."
 
       - name: Upload Google Play production bundle
         uses: actions/upload-artifact@v4
         with:
-          name: CROWNFALL-Stronghold-2.1.0-GooglePlay
+          name: CROWNFALL-Stronghold-2.1.1-GooglePlay
           path: |
-            CROWNFALL_Stronghold_2.1.0_GooglePlay.aab
-            CROWNFALL_2.1.0_AAB_Signature_Report.txt
-            CROWNFALL_2.1.0_AAB_Zip_Test.txt
-            CROWNFALL_2.1.0_AAB_SHA256.txt
+            CROWNFALL_Stronghold_2.1.1_GooglePlay.aab
+            CROWNFALL_2.1.1_AAB_Signature_Report.txt
+            CROWNFALL_2.1.1_AAB_Zip_Test.txt
+            CROWNFALL_2.1.1_AAB_SHA256.txt
           if-no-files-found: error
