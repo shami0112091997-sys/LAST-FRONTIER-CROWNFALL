@@ -2,11 +2,13 @@ package com.crownfall.stronghold;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.net.Uri;
 import android.view.View;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
@@ -44,14 +46,44 @@ public class MainActivity extends Activity {
         webView = new WebView(this);
         webView.setBackgroundColor(0xFF061017);
         setContentView(webView);
-        webView.setWebViewClient(new WebViewClient());
+        webView.setWebViewClient(new WebViewClient() {
+            private boolean shouldBlock(Uri uri) {
+                if (uri == null) return true;
+                String scheme = uri.getScheme();
+                if ("file".equalsIgnoreCase(scheme)) {
+                    return !uri.toString().startsWith("file:///android_asset/");
+                }
+                return !"about".equalsIgnoreCase(scheme);
+            }
+
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                return shouldBlock(request.getUrl());
+            }
+
+            @Override
+            @SuppressWarnings("deprecation")
+            public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                return shouldBlock(Uri.parse(url));
+            }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                view.post(MainActivity.this::immersive);
+            }
+        });
         webView.setWebChromeClient(new WebChromeClient());
 
         WebSettings s = webView.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
         s.setAllowFileAccess(true);
-        s.setAllowContentAccess(true);
+        s.setAllowContentAccess(false);
+        s.setAllowFileAccessFromFileURLs(false);
+        s.setAllowUniversalAccessFromFileURLs(false);
+        s.setBlockNetworkLoads(true);
+        s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         s.setLoadsImagesAutomatically(true);
         s.setUseWideViewPort(true);
         s.setLoadWithOverviewMode(false);
@@ -59,9 +91,19 @@ public class MainActivity extends Activity {
         s.setBuiltInZoomControls(false);
         s.setDisplayZoomControls(false);
         s.setSupportZoom(false);
+        if (android.os.Build.VERSION.SDK_INT >= 26) {
+            s.setSafeBrowsingEnabled(true);
+        }
+        WebView.setWebContentsDebuggingEnabled(false);
 
         webView.loadUrl("file:///android_asset/www/index.html");
         webView.post(this::immersive);
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus && webView != null) webView.post(this::immersive);
     }
 
     @Override
