@@ -8,20 +8,24 @@ test -s "$APK"
 adb install -r "$APK"
 adb logcat -c
 adb shell am force-stop "$PKG"
-adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1
+adb shell am start -W -n "$PKG/.MainActivity" | tee /tmp/crownfall_start.txt
 sleep 10
 
-adb shell pidof "$PKG" | tee /tmp/crownfall_pid.txt
-adb shell dumpsys activity activities | grep -E "mResumedActivity|topResumedActivity" | tee /tmp/crownfall_activity.txt || true
-adb exec-out screencap -p > /tmp/crownfall_screen.png
-adb logcat -d > /tmp/crownfall_logcat.txt
+PID="$(adb shell pidof "$PKG" 2>/dev/null || true)"
+printf '%s\n' "$PID" | tee /tmp/crownfall_pid.txt
+adb shell dumpsys activity activities | grep -E "mResumedActivity|topResumedActivity|ResumedActivity" | tee /tmp/crownfall_activity.txt || true
+adb exec-out screencap -p > /tmp/crownfall_screen.png || true
+adb logcat -d > /tmp/crownfall_logcat.txt || true
 
 if grep -E "FATAL EXCEPTION|AndroidRuntime.*FATAL|ANR in com\.crownfall\.stronghold" /tmp/crownfall_logcat.txt; then
   echo "CROWNFALL_RUNTIME_FAILURE"
   exit 1
 fi
 
-grep -qE '^[0-9]+$' /tmp/crownfall_pid.txt
-grep -q "com.crownfall.stronghold" /tmp/crownfall_activity.txt || true
+if [ -z "$PID" ]; then
+  echo "CROWNFALL_PROCESS_NOT_RUNNING"
+  grep -E "com\.crownfall\.stronghold|AndroidRuntime|chromium|WebView" /tmp/crownfall_logcat.txt | tail -120 || true
+  exit 1
+fi
 
-echo "CROWNFALL_EMULATOR_SMOKE_PASS"
+echo "CROWNFALL_EMULATOR_SMOKE_PASS PID=$PID"
