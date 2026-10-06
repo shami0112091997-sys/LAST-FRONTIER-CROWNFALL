@@ -5,6 +5,7 @@ on:
     branches: [ "main" ]
     paths:
       - ".github/workflows/crownfall-2.1-runtime-hotfix-verify.yml"
+      - "CROWNFALL_Stronghold_Android/app/src/main/java/com/crownfall/stronghold/MainActivity.java"
 
 jobs:
   verify-runtime-hotfix:
