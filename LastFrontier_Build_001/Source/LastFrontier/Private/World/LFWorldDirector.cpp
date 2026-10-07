@@ -34,6 +34,8 @@ void ALFWorldDirector::BeginPlay()
     BuildIndustrialDistrict();
     BuildLighting();
     SpawnEnemies();
+
+    UE_LOG(LogTemp, Display, TEXT("CROWNFALL_M60_WORLD=READY"));
 }
 
 AStaticMeshActor* ALFWorldDirector::SpawnShape(
