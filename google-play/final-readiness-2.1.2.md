@@ -6,7 +6,7 @@ Production identity:
 - Version code: `212`
 - Compile SDK: `36`
 - Target SDK: `36`
-- Minimum SDK: `23`
+- Minimum SDK: `24`
 - App label: `CROWNFALL: Stronghold`
 - Launch activity: `com.crownfall.stronghold.MainActivity`
 
