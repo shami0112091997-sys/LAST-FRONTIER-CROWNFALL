@@ -36,43 +36,52 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          G="CROWNFALL_Stronghold_Android/app/build.gradle.kts"
-          M="CROWNFALL_Stronghold_Android/app/src/main/AndroidManifest.xml"
-          J="CROWNFALL_Stronghold_Android/app/src/main/java/com/crownfall/stronghold/MainActivity.java"
-          H="CROWNFALL_Stronghold_Android/app/src/main/assets/www/index.html"
-
-          grep -q 'namespace = "com.crownfall.stronghold"' "$G"
-          grep -q 'applicationId = "com.crownfall.stronghold"' "$G"
-          grep -q 'versionCode = 212' "$G"
-          grep -q 'versionName = "2.1.2"' "$G"
-          grep -q 'compileSdk = 36' "$G"
-          grep -q 'targetSdk = 36' "$G"
-          grep -q 'minSdk = 23' "$G"
-          grep -q 'android:testOnly="false"' "$M"
-          grep -q 'android:screenOrientation="landscape"' "$M"
-          ! grep -q 'android.permission.INTERNET' "$M"
-          grep -q 'file:///android_asset/www/index.html' "$J"
-          grep -q 'decor.getWindowInsetsController()' "$J"
-          grep -q 'webView.post(this::immersive)' "$J"
-          grep -q 'CROWNFALL: STRONGHOLD' "$H"
-          grep -q 'الإصدار 2.1.2' "$H"
-          grep -q 'سياسة الخصوصية' "$H"
-          grep -q 'crownfall_v100_android' "$H"
-          ! grep -Eqi 'Phone Test|debugphone|phonepreview|CROWNFALL TEST|Android Preview|firebase|adsbygoogle|websocket' "$H"
-
           python - <<'PY'
           from pathlib import Path
           import re
-          t=Path("CROWNFALL_Stronghold_Android/app/src/main/assets/www/index.html").read_text(encoding="utf-8")
-          m=re.search(r"<script>(.*)</script>", t, re.S)
-          assert m, "script block missing"
-          Path("/tmp/crownfall-internal.js").write_text(m.group(1), encoding="utf-8")
-          urls=re.findall(r'https?://[^"\'<>\s]+', t, re.I)
+
+          G=Path("CROWNFALL_Stronghold_Android/app/build.gradle.kts").read_text(encoding="utf-8")
+          M=Path("CROWNFALL_Stronghold_Android/app/src/main/AndroidManifest.xml").read_text(encoding="utf-8")
+          J=Path("CROWNFALL_Stronghold_Android/app/src/main/java/com/crownfall/stronghold/MainActivity.java").read_text(encoding="utf-8")
+          H=Path("CROWNFALL_Stronghold_Android/app/src/main/assets/www/index.html").read_text(encoding="utf-8")
+
+          checks=[
+            ('namespace', 'namespace = "com.crownfall.stronghold"' in G),
+            ('applicationId', 'applicationId = "com.crownfall.stronghold"' in G),
+            ('versionCode 212', 'versionCode = 212' in G),
+            ('versionName 2.1.2', 'versionName = "2.1.2"' in G),
+            ('compileSdk 36', 'compileSdk = 36' in G),
+            ('targetSdk 36', 'targetSdk = 36' in G),
+            ('minSdk 23', 'minSdk = 23' in G),
+            ('testOnly false', 'android:testOnly="false"' in M),
+            ('landscape', 'android:screenOrientation="landscape"' in M),
+            ('no INTERNET permission', 'android.permission.INTERNET' not in M),
+            ('local asset load', 'file:///android_asset/www/index.html' in J),
+            ('immersive fix', 'decor.getWindowInsetsController()' in J and 'webView.post(this::immersive)' in J),
+            ('production title', 'CROWNFALL: STRONGHOLD' in H),
+            ('version label', 'الإصدار 2.1.2' in H),
+            ('privacy disclosure', 'سياسة الخصوصية' in H),
+            ('save key', 'crownfall_v100_android' in H),
+          ]
+          bad=[name for name,ok in checks if not ok]
+          assert not bad, "Preflight failed: "+", ".join(bad)
+
+          forbidden=['Phone Test','debugphone','phonepreview','CROWNFALL TEST','Android Preview','firebase','adsbygoogle','websocket']
+          found=[x for x in forbidden if x.lower() in H.lower()]
+          assert not found, "Forbidden production markers: "+", ".join(found)
+
+          urls=re.findall(r'https?://[^"\'<>\s]+', H, re.I)
           allowed={"http://www.w3.org/2000/svg"}
           unexpected=[u for u in urls if u not in allowed]
           assert not unexpected, f"Unexpected network URLs: {unexpected}"
+
+          m=re.search(r"<script>(.*)</script>", H, re.S)
+          assert m, "script block missing"
+          Path("/tmp/crownfall-internal.js").write_text(m.group(1), encoding="utf-8")
+          print("PREFLIGHT_OK")
           PY
           node --check /tmp/crownfall-internal.js
+          echo "JS_SYNTAX_OK"
 
       - name: Build internal-test AAB
         working-directory: CROWNFALL_Stronghold_Android
