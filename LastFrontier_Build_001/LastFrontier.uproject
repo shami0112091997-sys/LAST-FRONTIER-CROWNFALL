@@ -2,8 +2,13 @@
   "FileVersion": 3,
   "EngineAssociation": "5.8",
   "Category": "Games",
-  "Description": "LAST FRONTIER: CROWNFALL - First Playable scaffold",
+  "Description": "LAST FRONTIER: CROWNFALL - Unreal first playable",
   "Modules": [
-    { "Name": "LastFrontier", "Type": "Runtime", "LoadingPhase": "Default" }
-  ]
+    {
+      "Name": "LastFrontier",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    }
+  ],
+  "DisableEnginePluginsByDefault": true
 }

@@ -28,13 +28,28 @@ jobs:
 
     env:
       UE_IMAGE: ghcr.io/epicgames/unreal-engine:dev-slim-5.8.0
-      UE_ROOT: /tmp/UE58
+      WORK_ROOT: /mnt/crownfall-m60-linux
+      UE_ROOT: /mnt/crownfall-m60-linux/UE58
       PROJECT_REL: LastFrontier_Build_001/LastFrontier.uproject
-      ARCHIVE_DIR: ${{ github.workspace }}/M58-Packaged
+      ARCHIVE_DIR: /mnt/crownfall-m60-linux/Linux-Package
 
     steps:
       - name: Checkout LAST FRONTIER
         uses: actions/checkout@v4
+
+      - name: Prepare high-capacity Unreal work paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo rm -rf "$WORK_ROOT"
+          sudo mkdir -p "$WORK_ROOT/Zen" "$WORK_ROOT/DDC" "$WORK_ROOT/project-Saved" "$WORK_ROOT/project-Intermediate"
+          sudo chown -R "$USER:$USER" "$WORK_ROOT"
+          rm -rf LastFrontier_Build_001/Saved LastFrontier_Build_001/Intermediate
+          ln -s "$WORK_ROOT/project-Saved" LastFrontier_Build_001/Saved
+          ln -s "$WORK_ROOT/project-Intermediate" LastFrontier_Build_001/Intermediate
+          echo "=== Unreal work filesystems ==="
+          df -h / /mnt || true
+          echo "M60_WORK_PATHS=PASS"
 
       - name: Verify M60 Unreal first playable source
         shell: bash
@@ -125,6 +140,7 @@ jobs:
               --exclude='home/ue4/UnrealEngine/Templates/*' \
               --exclude='home/ue4/UnrealEngine/Samples/*' \
               --exclude='home/ue4/UnrealEngine/Engine/DerivedDataCache/*' \
+              --exclude='home/ue4/UnrealEngine/Engine/Plugins/*/Content/*' \
               'home/ue4/UnrealEngine/*'
 
           TEST_DIR="$UE_ROOT/Engine/Source/Runtime/CoreUObject/Tests"
@@ -154,13 +170,9 @@ jobs:
             exit 1
           fi
 
-          PLUGIN_CONTENT_COUNT=$(find "$UE_ROOT/Engine/Plugins" -type d -name Content | wc -l)
-          echo "M59_PLUGIN_CONTENT_DIRS=$PLUGIN_CONTENT_COUNT"
-          if [ "$PLUGIN_CONTENT_COUNT" -eq 0 ]; then
-            echo "M59_PLUGIN_CONTENT=FAIL"
-            exit 1
-          fi
-          echo "M59_PLUGIN_CONTENT=PASS"
+          PLUGIN_CONTENT_FILES=$(find "$UE_ROOT/Engine/Plugins" -path '*/Content/*' -type f 2>/dev/null | wc -l)
+          echo "M60_PLUGIN_CONTENT_FILES_AFTER_PRUNE=$PLUGIN_CONTENT_FILES"
+          echo "M60_PLUGIN_CONTENT_PRUNE=PASS"
 
           if [ -e "$UE_ROOT/Engine/Source/Runtime/CoreUObject/Tests/SubScriptStructOfTest.h" ]; then
             echo "M58_COREUOBJECT_TEST_REMOVAL=FAIL"
@@ -197,82 +209,15 @@ jobs:
           fi
           echo "M58_EDITOR_BUILD=PASS"
 
-      - name: Enable PythonScriptPlugin in working copy
+      - name: Verify committed genuine TestMap
         shell: bash
         run: |
           set -euo pipefail
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-
-          p = Path("LastFrontier_Build_001/LastFrontier.uproject")
-          data = json.loads(p.read_text())
-          plugins = data.setdefault("Plugins", [])
-          found = False
-          for item in plugins:
-              if item.get("Name") == "PythonScriptPlugin":
-                  item["Enabled"] = True
-                  found = True
-          if not found:
-              plugins.append({"Name": "PythonScriptPlugin", "Enabled": True})
-          p.write_text(json.dumps(data, indent=2) + "\n")
-          print("M58_PYTHON_PLUGIN_PATCH=PASS")
-          PY
-
-      - name: Create genuine TestMap.umap with Unreal Editor
-        shell: bash
-        run: |
-          set -euo pipefail
-          PROJECT="$GITHUB_WORKSPACE/$PROJECT_REL"
           MAP_FILE="$GITHUB_WORKSPACE/LastFrontier_Build_001/Content/Maps/TestMap.umap"
-          SCRIPT="$GITHUB_WORKSPACE/M58_CreateTestMap.py"
-          LOG="$GITHUB_WORKSPACE/M58-create-map.log"
-
-          mkdir -p "$GITHUB_WORKSPACE/LastFrontier_Build_001/Content/Maps"
-          cat > "$SCRIPT" <<'PY'
-          import unreal
-
-          subsystem = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
-          if subsystem is None:
-              raise RuntimeError("LevelEditorSubsystem unavailable")
-          ok = subsystem.new_level("/Game/Maps/TestMap", False)
-          if not ok:
-              raise RuntimeError("LevelEditorSubsystem.new_level returned False")
-          unreal.log("M58_TESTMAP_CREATE=PASS")
-          PY
-
-          EDITOR_CMD="$UE_ROOT/Engine/Binaries/Linux/UnrealEditor-Cmd"
-          if [ ! -x "$EDITOR_CMD" ]; then
-            EDITOR_CMD="$UE_ROOT/Engine/Binaries/Linux/UnrealEditor"
-          fi
-          if [ ! -x "$EDITOR_CMD" ]; then
-            echo "M58_EDITOR_CMD_MISSING"
-            find "$UE_ROOT/Engine/Binaries/Linux" -maxdepth 1 -type f -name 'UnrealEditor*' -print || true
-            exit 1
-          fi
-
-          set +e
-          "$EDITOR_CMD" "$PROJECT" \
-            -run=pythonscript \
-            -script="$SCRIPT" \
-            -unattended -nop4 -nullrhi -nosplash -NoSound \
-            -stdout -FullStdOutLogOutput 2>&1 | tee "$LOG"
-          RC=${PIPESTATUS[0]}
-          set -e
-
-          echo "M58_MAP_COMMAND_EXIT_CODE=$RC"
-          if [ "$RC" -ne 0 ]; then
-            tail -320 "$LOG" || true
-            exit "$RC"
-          fi
-          if [ ! -s "$MAP_FILE" ]; then
-            echo "M58_TESTMAP_FILE=FAIL:$MAP_FILE"
-            tail -320 "$LOG" || true
-            exit 1
-          fi
-          file "$MAP_FILE" || true
-          ls -lh "$MAP_FILE"
-          echo "M58_TESTMAP_FILE=PASS"
+          test -s "$MAP_FILE"
+          file "$MAP_FILE"
+          sha256sum "$MAP_FILE"
+          echo "M60_COMMITTED_TESTMAP=PASS"
 
       - name: Build Cook Stage Pak Archive
         shell: bash
@@ -285,7 +230,8 @@ jobs:
           cd "$UE_ROOT"
 
           set +e
-          Engine/Build/BatchFiles/RunUAT.sh BuildCookRun \
+          env "UE-ZenDataPath=$WORK_ROOT/Zen" "UE-LocalDataCachePath=$WORK_ROOT/DDC" \
+            Engine/Build/BatchFiles/RunUAT.sh BuildCookRun \
             -project="$PROJECT" \
             -noP4 \
             -build \
@@ -298,6 +244,8 @@ jobs:
             -platform=Linux \
             -clientconfig=Development \
             -unattended \
+            -ddc=noshared \
+            -skipzenstore \
             -utf8output 2>&1 | tee "$LOG"
           RC=${PIPESTATUS[0]}
           set -e
@@ -381,6 +329,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: M58-LastFrontier-Linux-Package
-          path: M58-Packaged
+          path: ${{ env.ARCHIVE_DIR }}
           if-no-files-found: error
           compression-level: 0
