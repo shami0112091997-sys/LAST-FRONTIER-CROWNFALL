@@ -51,11 +51,11 @@ jobs:
           P="google-play/privacy-policy.html"
 
           grep -q 'applicationId = "com.crownfall.stronghold"' "$G"
-          grep -q 'versionCode = 213' "$G"
+          grep -q 'versionCode = 214' "$G"
           grep -q 'versionName = "2.1.2"' "$G"
           grep -q 'compileSdk = 36' "$G"
           grep -q 'targetSdk = 36' "$G"
-          grep -q 'minSdk = 24' "$G"
+          grep -q 'minSdk = 23' "$G"
           grep -q 'android:testOnly="false"' "$M"
           ! grep -q 'android.permission.INTERNET' "$M"
           ! grep -Eqi 'Phone Test|DebugPhone|PhonePreview|Android Preview|CROWNFALL TEST|preview023|2\.1\.0|2\.1\.1' "$H"
@@ -115,7 +115,7 @@ jobs:
           "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging /tmp/CROWNFALL-2.1.2-QA-universal.apk | tee /tmp/crownfall_badging.txt
           "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump permissions /tmp/CROWNFALL-2.1.2-QA-universal.apk | tee /tmp/crownfall_permissions.txt
 
-          grep -q "package: name='com.crownfall.stronghold' versionCode='213' versionName='2.1.2'" /tmp/crownfall_badging.txt
+          grep -q "package: name='com.crownfall.stronghold' versionCode='214' versionName='2.1.2'" /tmp/crownfall_badging.txt
           grep -q "targetSdkVersion:'36'" /tmp/crownfall_badging.txt
           ! grep -q "android.permission.INTERNET" /tmp/crownfall_permissions.txt
           sha256sum "$AAB" | tee /tmp/crownfall_unsigned_source_aab_sha256.txt
