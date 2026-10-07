@@ -6,7 +6,10 @@
 #include "Engine/PointLight.h"
 #include "Engine/SkyLight.h"
 #include "Engine/StaticMeshActor.h"
+#include "Components/ExponentialHeightFogComponent.h"
 #include "Components/LightComponent.h"
+#include "Components/PointLightComponent.h"
+#include "Components/SkyLightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "UObject/ConstructorHelpers.h"
 
@@ -189,7 +192,10 @@ void ALFWorldDirector::BuildLighting()
             if (Lamp && Lamp->GetLightComponent())
             {
                 Lamp->GetLightComponent()->SetIntensity(2600.0f);
-                Lamp->GetLightComponent()->SetAttenuationRadius(900.0f);
+                if (UPointLightComponent* PointComponent = Cast<UPointLightComponent>(Lamp->GetLightComponent()))
+                {
+                    PointComponent->SetAttenuationRadius(900.0f);
+                }
                 Lamp->GetLightComponent()->SetLightColor(FLinearColor(1.0f, 0.50f, 0.18f));
             }
         }
