@@ -4,7 +4,7 @@
 - App name: CROWNFALL: Stronghold
 - Package: com.crownfall.stronghold
 - Version name: 2.1.2
-- Version code: 212
+- Version code: 213
 - Target SDK: 36
 - Minimum SDK: 24
 - Orientation: Landscape
