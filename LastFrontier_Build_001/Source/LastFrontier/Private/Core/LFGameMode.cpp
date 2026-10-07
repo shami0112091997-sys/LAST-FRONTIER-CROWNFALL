@@ -45,5 +45,6 @@ void ALFGameMode::EnsurePlayablePawn()
     if (Pawn)
     {
         PC->Possess(Pawn);
+        UE_LOG(LogTemp, Display, TEXT("CROWNFALL_M60_PLAYER=READY"));
     }
 }
