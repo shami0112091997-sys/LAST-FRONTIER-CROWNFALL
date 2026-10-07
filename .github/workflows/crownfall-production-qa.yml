@@ -251,4 +251,5 @@ jobs:
             /tmp/crownfall_after_start.png
             CROWNFALL_Stronghold_Android/app/build/reports/lint-results-release.html
             CROWNFALL_Stronghold_Android/app/build/reports/lint-results-release.txt
+            CROWNFALL_Stronghold_Android/app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: warn
