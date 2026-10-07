@@ -142,7 +142,7 @@ jobs:
           adb logcat -c
           adb shell am force-stop "$PKG"
           adb shell am start -W -n "$PKG/.MainActivity" | tee /tmp/crownfall_start.txt
-          sleep 12
+          sleep 8
           
           adb shell dumpsys window | grep -E 'mCurrentFocus|mFocusedApp' | tee /tmp/crownfall_focus.txt || true
           adb shell dumpsys activity activities | grep -E 'mResumedActivity|topResumedActivity' | tee /tmp/crownfall_activity.txt || true
@@ -151,13 +151,12 @@ jobs:
             adb shell dumpsys window | grep -E "mCurrentFocus|mFocusedApp" || true
             exit 1
           fi
-          adb exec-out screencap -p > /tmp/crownfall_before_start.png
-          adb logcat -d > /tmp/crownfall_prestart_logcat.txt || true
-          adb shell uiautomator dump /sdcard/crownfall-ui.xml >/dev/null 2>&1 || true
-          adb pull /sdcard/crownfall-ui.xml /tmp/crownfall_ui.xml >/dev/null 2>&1 || true
-          
+
           python3 -m pip -q install pillow
-          python3 - <<'PY'
+          RENDERED=0
+          for TRY in 1 2 3 4 5 6; do
+            adb exec-out screencap -p > /tmp/crownfall_before_start.png
+            if python3 - <<'PY'
           from PIL import Image
           p="/tmp/crownfall_before_start.png"
           im=Image.open(p).convert("RGB")
@@ -165,9 +164,23 @@ jobs:
           colors=im.resize((240,135)).getcolors(maxcolors=240*135)
           unique=len(colors or [])
           print("BEFORE_SCREEN", im.size, "extrema", ext, "sample_unique", unique)
-          if all(lo==hi for lo,hi in ext) or unique < 12:
-              raise SystemExit("visual smoke failed: launch screen is blank/uniform")
+          raise SystemExit(0 if (not all(lo==hi for lo,hi in ext) and unique >= 12) else 1)
           PY
+            then
+              RENDERED=1
+              break
+            fi
+            echo "Waiting for WebView render attempt $TRY/6"
+            sleep 5
+          done
+          if [ "$RENDERED" != "1" ]; then
+            echo "visual smoke failed: launch screen remained blank/uniform"
+            exit 1
+          fi
+
+          adb logcat -d > /tmp/crownfall_prestart_logcat.txt || true
+          adb shell uiautomator dump /sdcard/crownfall-ui.xml >/dev/null 2>&1 || true
+          adb pull /sdcard/crownfall-ui.xml /tmp/crownfall_ui.xml >/dev/null 2>&1 || true
           
           read -r W H < <(python3 - <<'PY'
           from PIL import Image
