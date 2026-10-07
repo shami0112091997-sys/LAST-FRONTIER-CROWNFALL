@@ -57,7 +57,7 @@ AStaticMeshActor* ALFWorldDirector::SpawnShape(
         return nullptr;
     }
 
-    Actor->SetActorLabel(Label);
+    Actor->Tags.Add(FName(Label));
     Actor->SetActorScale3D(Scale);
 
     UStaticMeshComponent* MeshComponent = Actor->GetStaticMeshComponent();
