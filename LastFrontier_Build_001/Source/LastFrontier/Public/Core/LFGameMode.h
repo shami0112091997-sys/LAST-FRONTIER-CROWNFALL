@@ -1,4 +1,5 @@
 #pragma once
+
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
 #include "LFGameMode.generated.h"
@@ -10,4 +11,10 @@ class LASTFRONTIER_API ALFGameMode : public AGameModeBase
 
 public:
     ALFGameMode();
+
+protected:
+    virtual void BeginPlay() override;
+
+private:
+    void EnsurePlayablePawn();
 };
