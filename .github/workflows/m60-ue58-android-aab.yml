@@ -38,7 +38,7 @@ jobs:
           test -f "$PROJECT_REL"
           grep -Fq 'PackageName=com.crownfall.stronghold' LastFrontier_Build_001/Config/DefaultEngine.ini
           grep -Fq 'StoreVersion=215' LastFrontier_Build_001/Config/DefaultEngine.ini
-          grep -Fq 'VersionDisplayName=0.4.0' LastFrontier_Build_001/Config/DefaultEngine.ini
+          grep -Fq 'VersionDisplayName=2.2.0' LastFrontier_Build_001/Config/DefaultEngine.ini
           grep -Fq 'MinSDKVersion=26' LastFrontier_Build_001/Config/DefaultEngine.ini
           grep -Fq 'TargetSDKVersion=36' LastFrontier_Build_001/Config/DefaultEngine.ini
           grep -Fq 'bBuildForArm64=True' LastFrontier_Build_001/Config/DefaultEngine.ini
@@ -217,7 +217,7 @@ jobs:
           fi
 
           mkdir -p "$GITHUB_WORKSPACE/M60-AAB"
-          cp "$AAB" "$GITHUB_WORKSPACE/M60-AAB/CROWNFALL_Unreal_0.4.0_v215_unsigned.aab"
+          cp "$AAB" "$GITHUB_WORKSPACE/M60-AAB/CROWNFALL_Unreal_2.2.0_v215_unsigned.aab"
           unzip -t "$GITHUB_WORKSPACE/M60-AAB/CROWNFALL_Unreal_0.4.0_v215_unsigned.aab"
           sha256sum "$GITHUB_WORKSPACE/M60-AAB/CROWNFALL_Unreal_0.4.0_v215_unsigned.aab" | tee "$GITHUB_WORKSPACE/M60-AAB/SHA256SUMS.txt"
           echo "M60_ANDROID_AAB=PASS"
