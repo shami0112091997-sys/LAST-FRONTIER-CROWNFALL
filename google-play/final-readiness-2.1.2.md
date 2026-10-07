@@ -3,7 +3,7 @@
 Production identity:
 - Package: `com.crownfall.stronghold`
 - Version name: `2.1.2`
-- Version code: `212`
+- Version code: `213`
 - Compile SDK: `36`
 - Target SDK: `36`
 - Minimum SDK: `24`
