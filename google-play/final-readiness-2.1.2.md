@@ -3,10 +3,10 @@
 Production identity:
 - Package: `com.crownfall.stronghold`
 - Version name: `2.1.2`
-- Version code: `213`
+- Version code: `214`
 - Compile SDK: `36`
 - Target SDK: `36`
-- Minimum SDK: `24`
+- Minimum SDK: `23`
 - App label: `CROWNFALL: Stronghold`
 - Launch activity: `com.crownfall.stronghold.MainActivity`
 
