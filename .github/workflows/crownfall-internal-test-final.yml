@@ -48,7 +48,7 @@ jobs:
           checks=[
             ('namespace', 'namespace = "com.crownfall.stronghold"' in G),
             ('applicationId', 'applicationId = "com.crownfall.stronghold"' in G),
-            ('versionCode 212', 'versionCode = 212' in G),
+            ('versionCode 214', 'versionCode = 214' in G),
             ('versionName 2.1.2', 'versionName = "2.1.2"' in G),
             ('compileSdk 36', 'compileSdk = 36' in G),
             ('targetSdk 36', 'targetSdk = 36' in G),
@@ -103,7 +103,7 @@ jobs:
       - name: Upload internal-test AAB
         uses: actions/upload-artifact@v4
         with:
-          name: CROWNFALL-2.1.2-InternalTest-Unsigned-AAB
+          name: CROWNFALL-2.1.2-v214-InternalTest-Unsigned-AAB
           path: |
             CROWNFALL_Stronghold_Android/app/build/outputs/bundle/release/app-release.aab
             /tmp/unsigned-aab-sha256.txt
