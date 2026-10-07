@@ -55,7 +55,7 @@ jobs:
           grep -q 'versionName = "2.1.2"' "$G"
           grep -q 'compileSdk = 36' "$G"
           grep -q 'targetSdk = 36' "$G"
-          grep -q 'minSdk = 23' "$G"
+          grep -q 'minSdk = 24' "$G"
           grep -q 'android:testOnly="false"' "$M"
           ! grep -q 'android.permission.INTERNET' "$M"
           ! grep -Eqi 'Phone Test|DebugPhone|PhonePreview|Android Preview|CROWNFALL TEST|preview023|2\.1\.0|2\.1\.1' "$H"
