@@ -56,6 +56,7 @@ jobs:
           grep -Fq 'CROWNFALL_M60_PLAYER=READY' LastFrontier_Build_001/Source/LastFrontier/Private/Core/LFGameMode.cpp
           grep -Fq 'PackageName=com.crownfall.stronghold' LastFrontier_Build_001/Config/DefaultEngine.ini
           grep -Fq 'StoreVersion=215' LastFrontier_Build_001/Config/DefaultEngine.ini
+          grep -Fq 'MinSDKVersion=26' LastFrontier_Build_001/Config/DefaultEngine.ini
           echo "M60_PROJECT_PREFLIGHT=PASS"
 
       - name: Deep free-space cleanup
