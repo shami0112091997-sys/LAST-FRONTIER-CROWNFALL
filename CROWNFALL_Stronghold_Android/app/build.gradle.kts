@@ -17,7 +17,7 @@ android {
 
     defaultConfig {
         applicationId = "com.crownfall.stronghold"
-        minSdk = 23
+        minSdk = 24
         targetSdk = 36
         versionCode = 212
         versionName = "2.1.2"
