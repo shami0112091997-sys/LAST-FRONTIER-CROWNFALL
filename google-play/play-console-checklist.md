@@ -6,7 +6,7 @@
 - Version name: 2.1.2
 - Version code: 212
 - Target SDK: 36
-- Minimum SDK: 23
+- Minimum SDK: 24
 - Orientation: Landscape
 - Distribution artifact: Android App Bundle (AAB)
 
