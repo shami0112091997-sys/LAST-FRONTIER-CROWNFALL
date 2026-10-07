@@ -2,7 +2,7 @@
 
 Production package: `com.crownfall.stronghold`
 Version: 2.1.2
-Version code: 212
+Version code: 214
 
 ## Recommended Play Console answers
 
