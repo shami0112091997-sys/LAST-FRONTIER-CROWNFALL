@@ -1,4 +1,4 @@
-# CROWNFALL: Stronghold 2.1.2 — Google Play AAB verification
+# CROWNFALL: Stronghold 2.1.2 — Final Google Play readiness
 
 Production identity:
 - Package: `com.crownfall.stronghold`
@@ -10,24 +10,44 @@ Production identity:
 - App label: `CROWNFALL: Stronghold`
 - Launch activity: `com.crownfall.stronghold.MainActivity`
 
-Google Play style bundle verification:
-- Production AAB built successfully from the current main branch.
-- `bundletool 1.18.2` successfully generated a universal APK from that AAB.
-- Universal APK signature verification passed using a temporary smoke-test key. The production AAB upload key remains unchanged.
-- AAB-derived APK installed successfully on an Android API 35 emulator.
-- Cold launch returned `Status: ok`.
-- MainActivity launched successfully.
-- App process remained alive after launch.
-- WebView 124 initialized and launched its sandboxed process.
-- No `FATAL EXCEPTION`, `AndroidRuntime FATAL`, or `ANR in com.crownfall.stronghold` was found in the captured runtime log.
-- The generated APK did not declare `android.permission.INTERNET`.
+## Current QA status
 
-Evidence:
-- GitHub Actions run: `37517204620`
-- Workflow conclusion: `success`
-- Evidence artifact: `CROWNFALL-2.1.2-Play-AAB-Smoke-Evidence`
-- Artifact ID: `11437079745`
-- Artifact digest: `sha256:a6070635722b3d4d76bbcc3ce47f4d51cf2bd9616ca3ef6f0fa728cf7f47a7aa`
+PASS:
+- Production source assertions
+- JavaScript syntax
+- Android release lint
+- Release AAB build
+- ZIP integrity
+- bundletool validation
+- AAB-derived APK generation
+- Package/version metadata
+- No INTERNET permission
+- Android installation
+- Cold launch
+- MainActivity top-resumed state
+- Process-alive check
+- Visual render of the launch screen
+- Start-button visual transition into the kingdom
+- Runtime crash/ANR/console-error scan
 
-Note:
-The headless emulator screenshot is not used as a visual-quality assertion because GPU/WebView rendering in the headless emulator can produce a black capture. Visual store screenshots are kept separately from actual game captures. Runtime and WebView initialization are verified through Android process/activity state and log evidence.
+Latest successful QA:
+- GitHub Actions run: `37581748639`
+- Evidence artifact: `CROWNFALL-2.1.2-Production-QA-Evidence`
+- Artifact ID: `11464908414`
+- Artifact digest: `sha256:16348b3c6d0e43f9310e05d491f2995b3d262d0ae63b0c71ea2f7f37c001cb9f`
+
+## Signed internal-test bundle
+
+Use the AAB signed with the existing CROWNFALL Google Play upload key.
+Expected upload-certificate SHA-1:
+`60:15:C8:63:D5:84:BF:FB:71:1B:4F:B1:65:A6:31:C7:43:70:93:5C`
+
+Never upload PhoneTest, DebugPhone, PhonePreview, or diagnostic APKs to the Play testing track.
+
+## Remaining external tasks
+
+- Upload the signed versionCode 214 AAB to Play Console > Internal testing.
+- Add tester email addresses and publish the internal-testing release.
+- Collect real-device feedback on touch, sound, building placement, campaign, combat, performance, and save persistence.
+- A public HTTPS privacy-policy URL and developer privacy contact remain required before the store/policy setup is finalized.
+- If the developer account is a new personal account created after November 13, 2023, production access later requires a qualifying closed test; internal testing itself is the recommended first QA track.
