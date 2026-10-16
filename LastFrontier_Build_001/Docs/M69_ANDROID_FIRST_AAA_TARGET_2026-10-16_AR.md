@@ -324,3 +324,12 @@ print("M71_WORLD_OK")
 - Next user action: inside the same app: hamburger menu > "الاختبار والإصدار" > "سلامة التطبيق" (App integrity) > "توقيع التطبيق من Play" > "شهادة مفتاح التحميل" (Upload key certificate), capture public SHA-256 fingerprint with private account identifiers obscured.
 - Keystore `CROWNFALL_v0.8_upload_key.jks` backed up twice in private Library; both binaries previously SHA256 verified against Oct 5 checksum. The checksum of the **file** is not the upload-key **certificate** fingerprint: compare the proper certificate fingerprint securely, not a password or JKS bytes.
 - App's Unreal M70 staged config is versionCode 216; M70 Editor Compile, M71 package/world, M73 ASTC Cook, M74 asset audit all PASS. Shipping Android AAB not built, signed, runtime-tested or published.
+
+
+## M77 Google Play complete bundle ledger verified — 2026-10-16 10:25 local
+- Screenshot from authenticated Google Play Console app "جميع حزم التطبيقات" (All app bundles) shows **5 app versions in total, 1-5 of 5**. The complete visible version code history is: 217 (versionName 2.2.0), 216 (2.2.0), 215 (2.2.0), 214 (2.1.2), 212 (2.1.2).
+- Highest Play uploaded bundle versionCode CONFIRMED = 217 based on complete visible all-bundles page. No code 218 in this ledger as of screenshot.
+- Next **release-stage** candidate versionCode = 218, valid as long as no competing new upload is made before stage/submission. Recheck current ledger just before upload.
+- New Unreal M70 stage configuration currently StoreVersion=216; NEVER upload 216/217 again. Only adjust StoreVersion in a fresh isolated M77 stage, AFTER upload certificate equivalence is verified and explicit approval for staging.
+- Next urgent blocker: Play Console -> "الاختبار والإصدار" -> "سلامة التطبيق" (Test and release -> App integrity) -> "شهادة مفتاح التحميل" (Upload key certificate): obtain publicly displayable SHA-256 certificate fingerprint and compare to private backup JKS certificate via keytool, never share password, private key or JKS. The JKS file SHA256 is different from certificate fingerprint; previous backup-file hash match does NOT establish upload certificate equality.
+- Last proof for Unreal remains M70 Editor Compile=PASS; M71 package/world load assertions=PASS; M73 Android_ASTC Cook=PASS 220 cooked packages/1 skipped; M74 cooked maps/assets verified; M75 project content verified; signed UE Shipping AAB and device tests PENDING. No Google Play submission, GCP changes, or VM commands executed at this checkpoint.
