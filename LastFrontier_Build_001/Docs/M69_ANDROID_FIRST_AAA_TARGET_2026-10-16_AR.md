@@ -238,3 +238,14 @@ print("M71_WORLD_OK")
 - Screenshot shows user entered literal `{cmd}` at shell prompt, with response `{cmd}: command not found`. The assistant previously used a raw code block containing a dynamic binding instead of literal Bash, and the UI exposed raw placeholder. This is **assistant formatting error**, not a project or Unreal error.
 - No M72 preflight ran in this screenshot; do not claim PASS or FAIL. The latest Unreal facts remain M70 compile exit=0, M71 Python executed successfully with assertions, M71 map integrity=PASS. The text-only gate in M71 was a false negative because `print` wasn't forwarded as expected, and the GitHub script was changed to use unreal.log in future.
 - Future instructions: Provide all terminal commands literally in fenced code blocks, never use dynamic placeholders inside raw CodeBlock. Prefer one short auditable read-only command at a time when user is copying via Android phone. Do not run BuildCookRun until M72 environment/content gates checked and Play version/signing reviewed.
+
+
+## M72 staged read-only preflight PASS — screenshot 2026-10-16 09:28
+- From actual Cloud Shell screenshot on existing VM: LastFrontier.uproject, Content/Maps/TestMap.umap, Config/DefaultEngine.ini, Source/LastFrontier/LastFrontier.Build.cs: all PASS on M70 isolated stage.
+- M72_MAP=PASS: original M63 TestMap and staged M70 TestMap are byte-for-byte identical at preflight time.
+- M72_ASSET_COUNT=23 (.uasset files in M70 stage), not an invented content-size claim.
+- Staged DefaultEngine.ini: PackageName=com.crownfall.stronghold, StoreVersion=216, TargetSDKVersion=36, bBuildForArm64=True, bEnableBundle=True.
+- Disk: /dev/root ~243G total, ~110G used, 133G free, ~46% used. Capacity is indicative; memory/SDK were separately verified previously.
+- Latest true compiler result M70_COMPILE_EXIT=0; M71 Python script successful with both asserted world/package checks and integrity PASS, but script's log-string gate false negative because print did not forward.
+- **No Android Cook, Package, signed AAB, real phone performance, or Play Console highest version check** performed as of this capture. Previous Play history says 217 while staged StoreVersion=216. Do not attempt Play upload with 216.
+- Next safe action: assess stage assets, configs and cooked-map list; inspect Android build readiness before making a deliberate controlled BuildCookRun. Avoid running CI or mutating the live M63 project.
