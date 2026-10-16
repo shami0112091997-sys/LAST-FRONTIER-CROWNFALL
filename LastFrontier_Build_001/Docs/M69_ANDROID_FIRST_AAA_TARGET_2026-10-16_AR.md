@@ -139,3 +139,12 @@
 - UE 5.8 official requirements: NDK r27c, Build Tools 35.0.1, JDK21, recommended target SDK35. Google Play after Aug 31 2026 requires target SDK36 for new/updated regular Android apps: actual packaging support must be validated; do not claim UE5.8 supports API36 from installed sdk files alone.
 - NEXT GATE: UE Turnkey -command=VerifySdk -Platform=Android (not InstallSdk, not ExecuteBuild) from already-present RunUAT.sh; capture output/exit code. VerifySdk is specified by official Epic CLI docs to inspect local SDK version compatibility, without invoking packaging. Engine AutomationTool may update its own temporary build artifacts or logs, but do not modify the game source.
 - Keep project originals unchanged, do not publish or use current 216 as final version; Play Console earlier 217 remains historical until checked.
+
+
+## Unreal Android Turnkey SDK verification — 2026-10-16 08:31
+- Authenticated session on VM crownfall-m62-build executed existing Engine/Build/BatchFiles/RunUAT.sh Turnkey -command=VerifySdk -platform=Android -unattended -utf8output, timeout 300; log path $HOME/crownfall/M69_TURNKEY_VERIFY_ANDROID.log.
+- Screenshot confirms VERIFY_EXIT=0 and AutomationTool exiting with ExitCode=0 (Success).
+- Android installed SDK validity: Status=Valid, MinAllowed_Sdk=r27c, MaxAllowed_Sdk=r29, Current_Sdk=r27c, Allowed_AutoSdk=r27c; flags InstalledSdk_ValidVersionExists, Support_FullSdk, Sdk_HasBestVersion.
+- Verified underlying SDK: platforms android-35 and android-36; build-tools 35.0.1; NDK 27.2.12479018 (r27c); Java 21.
+- Valid Turnkey SDK does NOT prove targetSdkVersion 36 package compatibility, Unreal editor map load in the current source, successful Cook, signed AAB, device 16KB memory page or Play Console acceptance.
+- Follow-up should be a low-cost read-only content/commandlet audit, followed by isolated staging, then a single controlled real build only after independent map and package version checks. Do not re-run costly GitHub runners or install extra SDK.
