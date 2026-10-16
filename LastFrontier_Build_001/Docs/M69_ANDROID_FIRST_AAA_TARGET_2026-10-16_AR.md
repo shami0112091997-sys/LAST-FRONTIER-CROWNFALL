@@ -101,3 +101,13 @@
 - يظهر تعارض إصدار: live StoreVersion=216، وسجل M66 يذكر نسخة Play 217؛ لا ترفع AAB برقم 216، ولا تخمّن أعلى رقم، تحقق عبر Play Console، ثم استخدم رقمًا أعلى داخل نسخة staged فقط.
 - النتيجة: VM preliminary structural preflight PASS؛ compile, real map load, Cook, Android signed AAB, on-device performance ما زالت NOT VERIFIED. سعة القرص وحدها لا تضمن النجاح، يلزم فحص RAM وAndroid SDK/NDK وأدلة تحميل الخريطة.
 - المرحلة القادمة الآمنة هي التعرف على آلية M63 editor-only commandlet وتشخيص PythonScriptPlugin وملفات البناء الموجودة، دون تعديل الأصول أو تشغيل Cook.
+
+
+## فحص المستخدم التالي (صورة Cloud Shell، 16 أكتوبر 2026 08:20)
+- بعد مراجعة screenshot ظهر وجود الملفات الفعلية:
+  - Source/LastFrontierEditor/Public/CrownfallAtomicMapCommandlet.h
+  - Source/LastFrontierEditor/Private/CrownfallAtomicMapCommandlet.cpp
+- .uproject يعلن DisableEnginePluginsByDefault=true ولكن PythonScriptPlugin وEditorScriptingUtilities مفعّلان صراحةً للـEditor. AndroidPermission وGooglePAD مفعّلان، وGoogleARCore وOnlineSubsystem غير مفعّلين. هذا يحل الغموض حول PythonScriptPlugin: ليس محظورًا بالضرورة بسبب سياسة تعطيل المكونات الافتراضية.
+- free -h: RAM total 31GiB، used 389MiB، free 26GiB، available ~30GiB؛ swap total 15GiB، used 3.0MiB. هذه **قراءة الموارد** لا تثبت نجاح Unreal عند التشغيل.
+- SHA256 لخريطة M63 TestMap.umap: 591855a572cb07a8fd6775f546b6ff818e706b9b62d09050f0533268b2edfad7 (يجب إعادة المقارنة إن ظهر تعارض كتابة).
+- الاستنتاج: commandlet المصدر موجود، المكونات التحريرية مفعلة والموارد جيدة مبدئياً؛ **اختبار تحميل الخريطة الحالي ما زال غير منفذ**. الخطوة التالية قراءة C++ commandlet لمعرفة بارامتر load-only والتأكد من عدم تنفيذ save/atomic mutation قبل تشغيله.
