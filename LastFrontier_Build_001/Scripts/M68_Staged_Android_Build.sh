@@ -57,6 +57,17 @@ s=re.sub(r"(?m)^StoreVersion=\d+(?=\r?$)","StoreVersion="+sys.argv[2],s,count=1,
 p.write_text(s)
 PY
 grep -Fqx "StoreVersion=$NEXT" "$CFG" || stop VERSION_NOT_UPDATED
+# Epic's Python commandlet requires PythonScriptPlugin enabled in this project.
+# With DisableEnginePluginsByDefault, fail BEFORE paying for a long compile.
+python3 - "$PROJ" <<'PY'
+import json, sys
+p=json.load(open(sys.argv[1], encoding="utf-8"))
+plugins={x.get("Name"):x.get("Enabled", True) for x in p.get("Plugins", [])}
+if p.get("DisableEnginePluginsByDefault") is True and plugins.get("PythonScriptPlugin") is not True:
+    print("M68_BLOCKED=PYTHON_PLUGIN_DISABLED_USE_APPROVED_EDITOR_ONLY_MAP_LOADER")
+    sys.exit(2)
+PY
+
 "$UE/Engine/Build/BatchFiles/Linux/Build.sh" LastFrontierEditor Linux Development "$PROJ" \
  -NoHotReloadFromIDE -Progress > "$RUN/logs/editor.log" 2>&1 || {
  tail -n 100 "$RUN/logs/editor.log"; stop EDITOR_BUILD_FAILED;
@@ -65,7 +76,7 @@ echo "M68_REAL_EDITOR_BUILD=PASS"
 # Load the map through REAL Unreal Python editor commandlet AFTER compiling staged game module.
 cat > "$RUN/logs/verify_map.py" <<'PY'
 import unreal
-world=unreal.EditorLoadingAndSavingUtils.load_map("/Game/Maps/TestMap")
+world=unreal.get_editor_subsystem(unreal.LevelEditorSubsystem).load_level("/Game/Maps/TestMap")
 if world is None: raise RuntimeError("M68_MAP_INVALID")
 print("M68_MAP_LOADED_OK")
 PY
