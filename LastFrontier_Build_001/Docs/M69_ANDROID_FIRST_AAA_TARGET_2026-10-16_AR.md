@@ -148,3 +148,11 @@
 - Verified underlying SDK: platforms android-35 and android-36; build-tools 35.0.1; NDK 27.2.12479018 (r27c); Java 21.
 - Valid Turnkey SDK does NOT prove targetSdkVersion 36 package compatibility, Unreal editor map load in the current source, successful Cook, signed AAB, device 16KB memory page or Play Console acceptance.
 - Follow-up should be a low-cost read-only content/commandlet audit, followed by isolated staging, then a single controlled real build only after independent map and package version checks. Do not re-run costly GitHub runners or install extra SDK.
+
+
+## M70 compilation observed pending — screenshot 2026-10-16 08:38
+- M70 staged snapshot exists at /home/shami0112091997/crownfall/M70_ANDROID_STAGE_20261016T053500Z; source M63 is separate.
+- Shell output confirms M70_STAGE_COPY=PASS from earlier and now M70_PREFLIGHT=PASS; this preflight requires staged LastFrontier.uproject and TestMap.umap non-empty, binary equality to original TestMap, and no symlink in staged Content.
+- Build command started as: UE_5.8.3/Engine/Build/BatchFiles/Linux/Build.sh LastFrontierEditor Linux Development <staged>/LastFrontier.uproject -NoHotReloadFromIDE -Progress, wrapped in timeout 1800 with output redirected to $HOME/crownfall/M70_EDITOR_COMPILE.log.
+- Latest screenshot has a waiting cursor and **does not show M70_COMPILE_EXIT or M70_MAP_UNCHANGED**. Therefore compile success or failure NOT VERIFIED. Do not re-run builds or start Cook; wait for terminal completion, then interpret actual return code and preserved map diff.
+- Compile is real work on the existing VM, not a detached background automation. Source project original should remain untouched; until finished, no new command in same shell.
