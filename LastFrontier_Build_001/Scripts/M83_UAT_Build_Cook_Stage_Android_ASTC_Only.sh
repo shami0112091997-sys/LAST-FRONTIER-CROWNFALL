@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# M83: isolated Android Shipping UAT BUILD+COOK+STAGE+PAK. NO PACKAGE/SIGN/DISTRIBUTION/UPLOAD.
+# M83: DRAFT under safety review; run M83A audit and create separate protected working stage first.
+# WARNING: -build may generate incidental debug-signed AAB, even without an explicit -package flag.
+if [ "${M83_REVIEW_APPROVED:-NO}" != YES ]; then echo 'M83_HOLD=RUN_M83A_AND_REVIEW'; exit 2; fi
 set -u
 P="$HOME/crownfall/M63_REAL_MOBILE/LastFrontier_Build_001"
 D="$HOME/crownfall/M77_RELEASE_STAGES/M77_v218_20261016T075330Z"
@@ -22,7 +24,7 @@ BEFORE=$(sha256sum "$P/Content/Maps/TestMap.umap" | cut -d' ' -f1)
 echo 'M83_PREFLIGHT=PASS'
 echo 'M83_ACTION=BUILD_COOK_STAGE_PAK_ONLY'
 echo 'M83_NO_PACKAGE=YES'
-echo 'M83_NO_SIGNING=YES'
+echo 'M83_DISTRIBUTION_SIGNING=NOT_REQUESTED'
 timeout 3600 "$E/Engine/Build/BatchFiles/RunUAT.sh" BuildCookRun \
   -project="$D/LastFrontier.uproject" -noP4 \
   -platform=Android -cookflavor=ASTC -clientconfig=Shipping \
