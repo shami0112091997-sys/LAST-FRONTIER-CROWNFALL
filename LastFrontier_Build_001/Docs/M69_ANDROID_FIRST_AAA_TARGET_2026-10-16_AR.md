@@ -232,3 +232,9 @@ print("M71_WORLD_OK")
 مراجعة التحذيرات: `Failed to find game directory .../UE_5.8.3/LastFrontier/Binaries` وتحذيرات ACL ظهرت مع خروج 0؛ لا نثبت ارتباطها بخلل محتوى الخريطة من هذه الأدلة. تم تعديل أداة M71 في GitHub لتستخدم `unreal.log("M71_WORLD_OK")` بدل `print` في أي تشغيل لاحق، لكن لا حاجة لإعادة الاختبار فقط للحصول على النص. هذا **نجاح فحص Package/World دون محاكاة تشغيل اللعبة**، وليس نجاح Cook أو Android AAB أو قياس الأداء.
 
 الخطوة التالية: فحص تمهيدي محدود لـ Android Cook على نسخة M70، ومراجعة مسارات الخريطة والأصول وأوامر UAT والموارد؛ لا تغيير في M63 الأصلي، ولا نشر Google Play، ولا اعتماد StoreVersion=216 بينما أعلى versionCode في Play Console غير مؤكد وسجل سابق أشار إلى 217.
+
+
+## M72 UI-literal copy error — screenshot 2026-10-16 09:25
+- Screenshot shows user entered literal `{cmd}` at shell prompt, with response `{cmd}: command not found`. The assistant previously used a raw code block containing a dynamic binding instead of literal Bash, and the UI exposed raw placeholder. This is **assistant formatting error**, not a project or Unreal error.
+- No M72 preflight ran in this screenshot; do not claim PASS or FAIL. The latest Unreal facts remain M70 compile exit=0, M71 Python executed successfully with assertions, M71 map integrity=PASS. The text-only gate in M71 was a false negative because `print` wasn't forwarded as expected, and the GitHub script was changed to use unreal.log in future.
+- Future instructions: Provide all terminal commands literally in fenced code blocks, never use dynamic placeholders inside raw CodeBlock. Prefer one short auditable read-only command at a time when user is copying via Android phone. Do not run BuildCookRun until M72 environment/content gates checked and Play version/signing reviewed.
