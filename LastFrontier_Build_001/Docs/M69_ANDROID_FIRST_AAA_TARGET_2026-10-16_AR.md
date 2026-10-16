@@ -370,3 +370,10 @@ print("M71_WORLD_OK")
 - `upload_cert.der` user supplied after App Signing page has SHA256 `40:C0:DB:...:2A:DE:A1:B8`, matching the user's two JKS backup certificates and old signed AAB. This resolves certificate identity at the public-certificate level. Credentials/password access for actual signing remains private and unverified.
 - The next work is to compile **LastFrontier Android Shipping** on the stage (without -package, -distribution or upload), preserving map checks and capturing an authoritative UBT log. Should start only if staged project + source target + Engine/Build/BatchFiles/Linux/Build.sh and resource preconditions pass. Follow up with signed AAB build only after Android Shipping compile genuinely PASS and signing is configured privately.
 - No claims of a compiled Android Shipping binary, signed AAB, successful device test or Play upload yet.
+
+
+## M78 Android Shipping native compile begun — screenshot 2026-10-16 10:59 local
+- Actual Cloud Shell screenshot on existing VM `crownfall-m62-build` shows successful M77 stage creation: `M77_RELEASE_STAGE=PASS`, `M77_VERSION_CODE=218`, `M77_ORIGINAL_MAP=UNCHANGED`; M77 stage path `$HOME/crownfall/M77_RELEASE_STAGES/M77_v218_20261016T075330Z`.
+- A new `bash <<'M78'` compile command was issued against the isolated M77 stage and the last visible line is `M78_PREFLIGHT=PASS`. The bottom of the screenshot shows no completed shell prompt.
+- This is an **in-progress** `Build.sh LastFrontier Android Shipping <M77>/LastFrontier.uproject -NoHotReloadFromIDE -Progress` with 2400-second timeout and log `$HOME/crownfall/M78_ANDROID_SHIPPING_COMPILE.log`. **Neither `M78_COMPILE_EXIT` nor `M78_MAP_INTEGRITY` is visible**; do NOT claim Shipping build PASSED.
+- Next step: wait for completion, don't restart, and inspect exit code, error summaries and map integrity. Only after a real build result should M79 packaging/signing proceed. The Play upload cert DER and local JKS certs matched previously; keystore and secret material have NOT been placed on VM or GitHub.
