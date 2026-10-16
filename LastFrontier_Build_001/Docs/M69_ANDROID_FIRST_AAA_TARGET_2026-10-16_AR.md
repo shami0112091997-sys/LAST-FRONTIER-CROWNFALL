@@ -359,3 +359,14 @@ print("M71_WORLD_OK")
 - Public X.509 subject: `O=CROWNFALL, CN=CROWNFALL Stronghold Upload Key`; issuer identical (self-signed). Certificate validity from 2026-10-05T07:35:57Z until 2054-02-20T07:35:57Z.
 - This removes the certificate mismatch risk **provided the uploaded DER indeed originated in Play Console's Upload key certificate section**, which is user-provided provenance. Old `BF:5E:...` appears to be a different Google app-signing certificate. No private key, secret, password, certificate binary or DER was committed.
 - Remaining gates: M77 staged code 218 based on Play all-bundles 5-row ledger max 217; verify private JKS signing alias/password available solely in user's secure environment (never in chat or GitHub); controlled UE Android Shipping distribution BuildCookRun; inspect AAB signature, AAB manifest package/targetSdk36/versionCode218, native ARM64 ELF 16KiB and bundletool delivered APK ZIP/page checks, phone launch/crash/performance; only then Play internal test upload. **No AAB or remote build performed in this step.**
+
+
+## M77 isolated release stage 218 PASS — VM screenshot 2026-10-16 10:53
+- Actual screenshot shows shell on existing `crownfall-m62-build` completed M77 bash stage creation, not merely planned.
+- `M77_RELEASE_STAGE=PASS`, `M77_VERSION_CODE=218`, `M77_ORIGINAL_MAP=UNCHANGED`.
+- Exact new staged project directory shown: `/home/shami0112091997/crownfall/M77_RELEASE_STAGES/M77_v218_20261016T075330Z`. Copied from previously cooked/compiled M70 stage, excluding `Saved`, `Intermediate`, `Binaries`, `DerivedDataCache`, `.git`, `*.jks`, `*.keystore`, `*.p12`, `*.pem`. Only staged `Config/DefaultEngine.ini` StoreVersion updated 216->218.
+- Both M63 original map and M70 stage map passed binary `cmp -s` against new M77 stage map at command exit, but this does not establish full source tree parity or game content quality.
+- Proof of bundle ledger Play Console on 2026-10-16: five total bundles, max 217, so M77 candidate 218 is not already present.
+- `upload_cert.der` user supplied after App Signing page has SHA256 `40:C0:DB:...:2A:DE:A1:B8`, matching the user's two JKS backup certificates and old signed AAB. This resolves certificate identity at the public-certificate level. Credentials/password access for actual signing remains private and unverified.
+- The next work is to compile **LastFrontier Android Shipping** on the stage (without -package, -distribution or upload), preserving map checks and capturing an authoritative UBT log. Should start only if staged project + source target + Engine/Build/BatchFiles/Linux/Build.sh and resource preconditions pass. Follow up with signed AAB build only after Android Shipping compile genuinely PASS and signing is configured privately.
+- No claims of a compiled Android Shipping binary, signed AAB, successful device test or Play upload yet.
