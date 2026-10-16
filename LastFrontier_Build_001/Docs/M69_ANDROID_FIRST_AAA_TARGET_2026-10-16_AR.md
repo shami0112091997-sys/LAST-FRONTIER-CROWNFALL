@@ -215,3 +215,20 @@
 - Next step must be READ-ONLY log forensics, not repeat execution: show contents of $HOME/crownfall/M71_world_probe.py and match LogPython/PythonScriptCommandlet/TestMap/M71_WORLD_OK/ExitCode from $HOME/crownfall/M71_world_probe.log, including tail. Decide from evidence whether Python commandlet ran and why marker not present.
 - Earlier M63 C++ load-only commandlet confirmed package/world PASS historically. If M71 was silently skipped by Python plugin or command-line dispatch, prefer proven C++ load-only mode on staged M70 after inspecting source for no-save behavior.
 - Epic UE5.8 script docs allow -run=pythonscript -script=absolute_file.py in headless mode; they also explicitly state level-loading in commandlet can be tricky. Do not invent an API root cause without log evidence.
+
+
+## تصحيح نتيجة M71 من سجل التنفيذ — 2026-10-16 09:20
+**تصحيح فني اعتمادًا على صورة السجل الكاملة:** ملف Python المنفذ فعليًا هو:
+```python
+import unreal
+p = unreal.load_package("/Game/Maps/TestMap")
+assert p is not None, "PACKAGE_MISSING"
+w = unreal.find_object(p, "TestMap", unreal.World)
+assert w is not None, "WORLD_MISSING"
+print("M71_WORLD_OK")
+```
+سجل محرك Unreal يوضح `LogPythonScriptCommandlet: Display: Running Python script: /home/.../M71_world_probe.py` ثم `Python script executed successfully`، `Success - 0 error(s), 4 warning(s)` وخروج عملية M71 = 0 مع `M71_MAP_INTEGRITY=PASS`. يثبت ذلك أن شرطي assert للـPackage والـWorld اجتازا عند تشغيل هذا الملف. لم يُعرض `M71_WORLD_OK` في سجل المحرك بسبب استخدام `print` الذي لم يظهر كرسالة `LogPython`؛ لذا `M71_WORLD_TEST=FAIL` كانت نتيجة تحقق نصي سلبية كاذبة، **وليست دليلًا على فساد الخريطة أو فشل التحميل**.
+
+مراجعة التحذيرات: `Failed to find game directory .../UE_5.8.3/LastFrontier/Binaries` وتحذيرات ACL ظهرت مع خروج 0؛ لا نثبت ارتباطها بخلل محتوى الخريطة من هذه الأدلة. تم تعديل أداة M71 في GitHub لتستخدم `unreal.log("M71_WORLD_OK")` بدل `print` في أي تشغيل لاحق، لكن لا حاجة لإعادة الاختبار فقط للحصول على النص. هذا **نجاح فحص Package/World دون محاكاة تشغيل اللعبة**، وليس نجاح Cook أو Android AAB أو قياس الأداء.
+
+الخطوة التالية: فحص تمهيدي محدود لـ Android Cook على نسخة M70، ومراجعة مسارات الخريطة والأصول وأوامر UAT والموارد؛ لا تغيير في M63 الأصلي، ولا نشر Google Play، ولا اعتماد StoreVersion=216 بينما أعلى versionCode في Play Console غير مؤكد وسجل سابق أشار إلى 217.
