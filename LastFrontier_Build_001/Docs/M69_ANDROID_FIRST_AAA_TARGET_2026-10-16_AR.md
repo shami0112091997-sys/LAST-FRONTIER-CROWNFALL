@@ -89,3 +89,15 @@
 - أمر gcloud compute ssh الذي أُطلق من داخل نفس VM أعاد no active account selected. لا حاجة للقيام بـ gcloud auth login داخل VM لهذا الغرض، ولا حاجة للاتصال بالخادم مرة أخرى.
 - أفضل خطوة تالية: فحص محلي للقرص والملفات وإعدادات Unreal بخط أمر قراءة فقط. تجنب تنزيل أدوات أو منح رموز اعتماد جديدة قبل إثبات الحاجة.
 - هذه الأخطاء تتعلق بالبيئة والأوامر، ولا تثبت فشل جديد للعبة أو تلف خريطة M63.
+
+
+## تحقق VM الجديد من صورة المستخدم (16 أكتوبر 2026 حوالي 08:18 محليًا)
+فحص محلي يعتمد على أوامر shell للقراءة فقط، وقد ظهر ما يلي في الصورة:
+- المسار الحقيقي للمشروع: /home/shami0112091997/crownfall/M63_REAL_MOBILE/LastFrontier_Build_001/LastFrontier.uproject -> PASS لوجود ملف غير فارغ.
+- خريطة /Content/Maps/TestMap.umap -> PASS لوجود ملف غير فارغ فقط، **ليس اختبار تحميل/سلامة serialization**.
+- /home/shami0112091997/UE_5.8.3/Engine/Binaries/Linux/UnrealEditor-Cmd -> PASS لوجود ملف غير فارغ فقط، **ليس تجميعًا جديدًا**.
+- Live DefaultEngine.ini: PackageName=com.crownfall.stronghold, StoreVersion=216, TargetSDKVersion=36, bBuildForArm64=True.
+- القرص /dev/root بحجم 243G، مستخدم 109G، متاح 134G، استخدام 45%.
+- يظهر تعارض إصدار: live StoreVersion=216، وسجل M66 يذكر نسخة Play 217؛ لا ترفع AAB برقم 216، ولا تخمّن أعلى رقم، تحقق عبر Play Console، ثم استخدم رقمًا أعلى داخل نسخة staged فقط.
+- النتيجة: VM preliminary structural preflight PASS؛ compile, real map load, Cook, Android signed AAB, on-device performance ما زالت NOT VERIFIED. سعة القرص وحدها لا تضمن النجاح، يلزم فحص RAM وAndroid SDK/NDK وأدلة تحميل الخريطة.
+- المرحلة القادمة الآمنة هي التعرف على آلية M63 editor-only commandlet وتشخيص PythonScriptPlugin وملفات البناء الموجودة، دون تعديل الأصول أو تشغيل Cook.
