@@ -377,3 +377,12 @@ print("M71_WORLD_OK")
 - A new `bash <<'M78'` compile command was issued against the isolated M77 stage and the last visible line is `M78_PREFLIGHT=PASS`. The bottom of the screenshot shows no completed shell prompt.
 - This is an **in-progress** `Build.sh LastFrontier Android Shipping <M77>/LastFrontier.uproject -NoHotReloadFromIDE -Progress` with 2400-second timeout and log `$HOME/crownfall/M78_ANDROID_SHIPPING_COMPILE.log`. **Neither `M78_COMPILE_EXIT` nor `M78_MAP_INTEGRITY` is visible**; do NOT claim Shipping build PASSED.
 - Next step: wait for completion, don't restart, and inspect exit code, error summaries and map integrity. Only after a real build result should M79 packaging/signing proceed. The Play upload cert DER and local JKS certs matched previously; keystore and secret material have NOT been placed on VM or GitHub.
+
+
+## M78 Android Shipping compile PASS from Cloud Shell screenshot 2026-10-16 11:01
+- **Real on-VM user screenshot, not simulation**: M77 isolated stage at `/home/shami0112091997/crownfall/M77_RELEASE_STAGES/M77_v218_20261016T075330Z`, with StoreVersion 218, original TestMap unchanged.
+- M78 `Build.sh LastFrontier Android Shipping <M77>/LastFrontier.uproject -NoHotReloadFromIDE -Progress` concluded successfully: `M78_PREFLIGHT=PASS`; `M78_COMPILE_EXIT=0`; `Result: Succeeded`; `M78_MAP_INTEGRITY=PASS`; terminal prompt returned.
+- Output log exact path `$HOME/crownfall/M78_ANDROID_SHIPPING_COMPILE.log`. This passes native Android Shipping **compile** stage. Still need independently inspect presence of staged arm64 binaries and log to establish exact output and readiness.
+- Earlier M73 Android_ASTC Cook on M70 passed with 220 packages cooked, but M77 intentionally excludes `Saved/`; therefore M77 stage needs its own cook/package sequence, even if cache reuse possible.
+- Remaining: check Android game binary, DefaultGameMap/packaging maps, Shipping configuration; configure original verified upload JKS securely (never through chat/GitHub), then UAT controlled build/cook/package/distribution to produce signed real AAB, confirm versionCode218/package and actual targetSDK36, source signature, 16KB ELF/page support, device install/play/crash/perf, Play upload internal testing. No M79, AAB, device or Play publish success claimed.
+- **Do not rerun M78**. Next step is M79 low-cost **read-only** artifact and packaging/map check in current SSH session; do not introduce new VM/cloud resources.
