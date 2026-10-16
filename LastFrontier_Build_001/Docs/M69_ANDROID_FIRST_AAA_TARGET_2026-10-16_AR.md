@@ -266,3 +266,14 @@ print("M71_WORLD_OK")
 - **Required next read-only gate**: inspect cooked directory for actual `TestMap.umap` and cooked project assets, and correlate with saved log `TestMap`, `LogCook` and any warning or hidden errors; do not infer map/package completeness from GlobalShaderCache or EditorResources. Epic's 5.8 official cooking documentation distinguishes platform-specific Cook outputs from packaging (AAB).
 - Shipping `AAB`, signed upload keystore verification, `versionCode > Play Console max`, API36, ELF/16KB, device gameplay FPS tests, and Google Play compliance remain UNVERIFIED. Current staged StoreVersion=216 is not usable for Play if historical 217 max still applies.
 - No new cloud resources provisioned, no live-project modification, no Play publication.
+
+
+## M74 verified complete Android_ASTC project cook — 2026-10-16 09:45
+- Actual user's VM screenshot shows M73_COOK_EXIT=0, M73_MAP_INTEGRITY=PASS, LogCook final "Done!" / commandlet result 0 and "Success - 0 error(s), 5 warning(s)".
+- M74 read-only verification of $HOME/crownfall/M70_ANDROID_STAGE_20261016T053500Z/Saved/Cooked/Android_ASTC confirmed cooked LastFrontier/Content/Maps/TestMap.umap + TestMap_M63_Atomic.umap and corresponding .uexp, plus cooked real wooden crate, large castle door and street lamp .uasset objects.
+- Final cook statistics visible: Packages Cooked: 220, Packages Incrementally Skipped: 0, Packages Skipped by Platform: 1, Total Packages: 221; zero packages remain. M73_COOKED_FILE_COUNT=552 on disk.
+- This supersedes the previous M73 checkpoint's concern that only engine global cache and editor assets had been observed: GAME CONTENT AND MAPS NOW VERIFIED in Android_ASTC cook outputs. Do not confuse game cook PASS with android native ARM64 build/package/signature/AAB/device runtime PASS.
+- User's live staged DefaultEngine.ini still reads StoreVersion=216 with historical Play line 217. Confirm highest actual version via Play Console and stage a strictly higher version before any actual Play release. UnrealEngine 5.8 targetSdk 36 actual manifest must be verified on built package.
+- Reviewed Epic 5.8 Android Settings, Packaging and Distribution Signing docs. Signed Shipping AAB needs unique app ID, matching upload keystore/alias, correct StoreVersion, Shipping+Distribution, valid actual Android target; never ask for keystore passwords or dump signing config into logs.
+- Reviewed dormant Scripts/M68_Staged_Android_Build.sh and corrected its invalid headless get_editor_subsystem/print map probe to package=unreal.load_package, unreal.find_object(package,"TestMap",unreal.World) and unreal.log marker, aligned with M71's actually successful Python script. This is a source code fix committed to GitHub, not an executed M68 build.
+- Next gate M75: read-only staged packaging/signing/version readiness audit. No GPU/device testing has taken place; no AAB has been built or uploaded.
