@@ -257,3 +257,12 @@ print("M71_WORLD_OK")
 - Added Scripts/M73_Android_ASTC_Cook_Stage_Only.sh; source is guarded by map byte comparison, project/engine existence, minimum 60GiB free disk, time limit 45 minutes, original-vs-staged map SHA256 after execution, returns exact exit code and inspects log. Never calls signing, Android package, store upload, or gcloud API; no deletion of original.
 - Command passed local bash -n syntax validation; not yet executed on user's VM. A zero exit by itself is not proof of full Play-ready Shipping binary. If any failure occurs, stop and inspect log rather than repeating blindly.
 - Highest Play Console versionCode remains unverified, source 216 is under previously recorded Play line 217; cook-only may use version 216 as it cannot be uploaded. Production staged release must adopt code strictly above confirmed Play max.
+
+
+## M73 Android_ASTC Cook result from VM screenshot — 2026-10-16 09:38
+- Verified from user's real Cloud Shell screenshot on existing `crownfall-m62-build` VM: `M73_ANDROID_COOK=STARTED`, `M73_COOK_EXIT=0`, `M73_MAP_INTEGRITY=PASS`.
+- Unreal reported `LogInit: Display: Success - 0 error(s), 5 warning(s)`. Output files shown under isolated stage `$HOME/crownfall/M70_ANDROID_STAGE_20261016T053500Z/Saved/Cooked/Android_ASTC/` include Engine GlobalShaderCache and Engine/Content/EditorResources. This verifies the Cook commandlet exited successfully and wrote platform-specific files, not necessarily that the user's project map `TestMap` and game .uasset packages were cooked.
+- Exact VM cook log: `$HOME/crownfall/M73_ANDROID_ASTC_COOK.log`. Original M63 content remained map-hash equal to M70 stage after the run.
+- **Required next read-only gate**: inspect cooked directory for actual `TestMap.umap` and cooked project assets, and correlate with saved log `TestMap`, `LogCook` and any warning or hidden errors; do not infer map/package completeness from GlobalShaderCache or EditorResources. Epic's 5.8 official cooking documentation distinguishes platform-specific Cook outputs from packaging (AAB).
+- Shipping `AAB`, signed upload keystore verification, `versionCode > Play Console max`, API36, ELF/16KB, device gameplay FPS tests, and Google Play compliance remain UNVERIFIED. Current staged StoreVersion=216 is not usable for Play if historical 217 max still applies.
+- No new cloud resources provisioned, no live-project modification, no Play publication.
