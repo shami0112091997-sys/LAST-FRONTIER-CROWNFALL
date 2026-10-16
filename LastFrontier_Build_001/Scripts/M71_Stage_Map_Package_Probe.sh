@@ -13,7 +13,7 @@ if [ ! -s "$A" ] || [ ! -s "$B" ] || [ ! -s "$D/LastFrontier.uproject" ] || [ ! 
 else
   HA=$(sha256sum "$A" | cut -d' ' -f1)
   HB=$(sha256sum "$B" | cut -d' ' -f1)
-  printf '%s\n' 'import unreal' 'p = unreal.load_package("/Game/Maps/TestMap")' 'assert p is not None, "PACKAGE_MISSING"' 'w = unreal.find_object(p, "TestMap", unreal.World)' 'assert w is not None, "WORLD_MISSING"' 'print("M71_WORLD_OK")' > "$T"
+  printf '%s\n' 'import unreal' 'p = unreal.load_package("/Game/Maps/TestMap")' 'assert p is not None, "PACKAGE_MISSING"' 'w = unreal.find_object(p, "TestMap", unreal.World)' 'assert w is not None, "WORLD_MISSING"' 'unreal.log("M71_WORLD_OK")' > "$T"
   if python3 -m py_compile "$T"; then
     echo M71_PYTHON_SYNTAX=PASS
     timeout 600 "$E/Engine/Binaries/Linux/UnrealEditor-Cmd" "$D/LastFrontier.uproject" -run=pythonscript "-script=$T" -nullrhi -unattended -nosound -stdout -FullStdOutLogOutput > "$L" 2>&1
