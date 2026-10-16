@@ -182,3 +182,12 @@
 
 ### الحالة عند اعتماد المعيار
 آخر نتيجة موثقة بالصورة: M70_COMPILE_EXIT=0, Result Succeeded, M70_MAP_UNCHANGED=PASS. اختبار تحميل TestMap الأحدث عبر Python لم يُثبت نجاحه؛ الصورة 08:44 أظهرت أن الأمر لم يبدأ بسبب مشكلة نسخ ([cmd]: command not found). **الخطوة التالية هي تشخيص/إصلاح هذا الإشكال في تنفيذ الأمر مع مراجعة Shell قبل تشغيل اختبار الخريطة على M70، دون تجاوز بوابة الاختبار.**
+
+
+## M70 verified safe inline Python commandlet gate — 2026-10-16
+- User said "افعل" to continue from M70 staged compile PASS and unexecuted map-load test due to terminal pasting issue. No SSH command execution access is currently connected, so the next VM command still must be executed in user's existing Cloud Shell terminal.
+- Verified against **Epic UE 5.8** documentation for PythonScriptPlugin: UnrealEditor-Cmd with -run=pythonscript and -script=<inline Python code> is officially supported; LevelEditorSubsystem.load_level("/Game/Maps/TestMap") returns bool and closes previous level without saving.
+- A standalone local Bash gate (M70_Stage_Map_Load_Gate.sh) was prepared and validated with bash -n, Python compile, and three mock runs: normal PASS, serialization-error REJECT, altered-staged-map REJECT. **Mock tests are not execution of Unreal**. Logs are saved outside project.
+- The script resolves authoritative M63 and staging M70 paths, requires matching map SHA256 before launching the staged project's UnrealEditor-Cmd, sets a 600-second timeout, checks an explicit print marker and all critical error patterns, then checks the original and staged map SHA256 against pre-run snapshots. It never invokes SaveMap, Cook, BuildCookRun, or Google Play publish.
+- Source original: $HOME/crownfall/M63_REAL_MOBILE/LastFrontier_Build_001. Staged: $HOME/crownfall/M70_ANDROID_STAGE_20261016T053500Z. Unreal: $HOME/UE_5.8.3.
+- **No new M70 map load PASS yet.** Do not proceed to Android Shipping until the user reports the script's actual M70_LOAD_EXIT and M70_MAP_INTEGRITY, or equivalent directly verified engine log.
