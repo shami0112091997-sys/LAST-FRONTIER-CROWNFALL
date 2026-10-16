@@ -1,0 +1,75 @@
+# CROWNFALL — M69 Android First / AAA target — 2026-10-16
+
+## القرار الملزم لمسار التطوير
+المستخدم اعتمد Android أولاً للعبة LAST FRONTIER: CROWNFALL، مع جودة AAA كهدف بصري طويل المدى وليس وصفاً للحالة الحالية. الأولوية: نسخة Unreal حقيقية تعمل بثبات على هاتف Android، ثم توسيع المحتوى البصري والتفاعلي بصورة قابلة للقياس، وبعد ذلك Play Console. لا تُعد لعبة جاهزة لمجرد نجاح preflight أو وصول ملفات إلى GitHub.
+
+## مرجع المشروع الآمن
+- المستودع الخاص: shami0112091997-sys/LAST-FRONTIER-CROWNFALL
+- الفرع الآمن: m66-smart-recovery (لا تعديل تلقائي لـ main)
+- خادم البناء/الأصول الأحدث: crownfall-m62-build
+- Unreal الحالي على VM: $HOME/UE_5.8.3
+- نسخة المحتوى الأحدث على VM: $HOME/crownfall/M63_REAL_MOBILE/LastFrontier_Build_001
+- الحفاظ على TestMap.umap وأصول uasset الأصلية قبل التعديل. الاختبار على نسخة معزولة + SHA256 ثم اختبار إعادة الفتح.
+- منع مشاركة ملف التوقيع JKS أو أسراره وGitHub tokens وGoogle credentials، وإبقاء نتائج ADB الخام على جهاز الاختبار، خارج المستودع.
+- لا استخدام مفرط أو متكرر لموارد GitHub Actions، ولا توفير موارد Google Cloud مدفوعة أو توسيع VM دون موافقة صريحة.
+
+## الحالة المثبتة مقابل المخطط
+- M60: نجح تجميع Editor، لكن Cook فشل في Actions run 37645589203. السجل تضمن Serialization error في TestMap.umap (FName index 64 خارج [0,44))، ثم Editor exit 139 وUAT exit 25. هذا خاص بتلك الخريطة/التجربة وليس حكماً آلياً على خريطة VM M63.
+- M63: توجد نتائج سابقة لتحميل خرائط واختبارات أصول على VM، لكن AAB Shipping نهائي صالح للنشر غير مثبت.
+- StreetLamp01: 30,610 مثلثاً في LOD0 وSetLods=-1 ثم rollback PASS. لا تعديل للـLOD قبل معرفة السبب الحقيقي.
+- Assets M63 audit: 11 StaticMesh, 6 Textures. ليست جودة AAA مكتملة.
+- Github M60: كود LFWorldDirector ينشئ 18 PointLights (9 على طول المسار × جانبين). يجب فحص تكلفتها على الجهاز قبل اختيار بدائل (إضاءة ثابتة/تقليل المدى/ظلال غير متحركة/خفض عدد الأضواء).
+- الرسومات الحالية تعتمد جزئياً على Engine BasicShapes. المواد والشخصيات الفيكتورية والأنيميشن/الأصوات والمؤثرات الأصلية غير مكتملة.
+- الإصدار في إعدادات GitHub هو StoreVersion 215، بينما سجل M66 يرجع إلى إصدار سابق على Play برقم 217. يجب فحص أعلى versionCode في Console.
+- Data Safety المدرج لنسخة WebView 2.1.2 لا يمكن نسخه تلقائياً إلى Unreal. يجب فحص manifest وSDKs والبيانات الفعلية.
+- ملف M68 الآمن موجود لكنه لم يُنفذ على VM في هذه الجلسة. لا تدّعِ نجاحه دون سجل.
+
+## أهداف الأداء المقترحة (ليست نتائج)
+| فئة الجهاز | الهدف | قياس القبول المقترح |
+| منخفض | 30 FPS مع جودة مرنة | 15 دقيقة لعب؛ p95 frame time <= 40 ms، لا crash؛ خفض التفاصيل عند الحاجة |
+| متوسط | 30 FPS مستقرة | 15 دقيقة؛ p95 frame time <= 40 ms؛ لا تقطيع مستمر |
+| مرتفع | 60 FPS اختياري إن أمكن | 15 دقيقة؛ p95 frame time <= 22 ms؛ الرجوع إلى 30 FPS عندما تتطلب الحرارة |
+هذه أهداف أولية قابلة للتعديل بعد تجربة حقيقية على أجهزة مختلفة. لا تثبت أرقام FPS بقراءة dumpsys gfxinfo وحدها لأن Unreal قد يعرض بإطار Native Vulkan؛ اعتمد Unreal Insights وAndroid GPU Inspector والتتبعات الفعلية. سجّل درجة الحرارة/thermal throttling والذاكرة والإطارات، ولا تقارن نتائج جلسة قصيرة بمتطلبات لعب ممتد.
+
+## خطة تطوير متدرجة
+### المرحلة A — إصلاح بوابات M68 (شرط مسبق)
+1. تشغيل Scripts/M68_Release_Preflight_ReadOnly.sh على VM وقراءة التقرير.
+2. تشغيل تشخيص StreetLamp M67 وتحديد مسبب -1، دون إعادة المحاولة العمياء.
+3. اختبار تحميل M63 TestMap بواسطة UnrealEditor-Cmd على نسخة Stage؛ رفض Serialization errors فوراً.
+4. تأكيد Android toolchain ودعم targetSdk 36 عملياً في المحرك قبل البناء.
+5. فحص رقم أعلى versionCode ومفتاح التوقيع في Play Console دون كشف الأسرار.
+
+### المرحلة B — Android playable vertical slice
+- قلعة فيكتورية صغيرة متماسكة: دخول/خروج/بناء غطاء، ممرات وإضاءة، ميكانيك حركة وتصويب واشتباك وأعداء.
+- واجهة لمس مناسبة لهواتف مختلفة، منظور ثالث، حساسية الكاميرا، منطقة Fire واضحة، إيقاف مؤقت وإعدادات جودة، واجهة عربية/إنجليزية بعد الاختبار.
+- تسجيل لمس الشاشة والتصادم والشخصيات وعدم تداخل الأزرار مع عصا الحركة.
+- مواد وملفات صوت وأصول 3D أصلية أو مرخّصة بوضوح. لا أصول مزيفة لتكبير حجم AAB.
+- القياس على الأجهزة قبل زيادة المؤثرات ورفع عدد الأعداء.
+
+### المرحلة C — تحسينات قابلية التوسع
+- ملفات جودة Android_Low/Mid/High مرشحة في Docs/M69_AndroidQualityProfiles_CANDIDATE.ini، غير مفعلة في Config؛ اعتمدها بعد إثبات اختيار DeviceProfile وتوافقها مع تعريفات UE المحلية.
+- تقليل كلفة PointLights، اختصار مواد عالية التعقيد، instancing، texture compression ASTC، mesh LOD اختبارياً فقط بعد حل StreetLamp، وقياس GPU.
+- توازن GPU/CPU/Memory، تجهيز PSO لتقليل التقطيع على الأجهزة المدعومة.
+- جودة ممتازة لا تعني تفعيل كل مؤثرات PC على الهاتف.
+
+### المرحلة D — إطلاق Android
+- Build/Cook/Package حقيقي UE Shipping على مشروع staging؛ signed AAB مع ملف SHA256، واصدار أعلى من أعلى نسخة Console.
+- تحقق bundletool من package, versionCode, target SDK, arm64, permissions; تحقق دعم صفحات 16KB لتطبيقات 64-bit، وشهادة upload والتوافق.
+- اختبار من Google Play internal/closed حسب حساب المطور؛ 15 دقيقة لعب متصلة على ثلاثة مستويات قدر الإمكان، وعدم انهيار وإعدادات حرارية آمنة.
+- سياسة خصوصية HTTPS واضحة ووسيلة تواصل معتمدة، بيانات Data safety تطابق التطبيق الحقيقي، تصنيف عمري/أصول المتجر/متطلبات الحساب.
+- لا رفع للإنتاج قبل تحقق الأدلة وموافقة صاحب اللعبة.
+
+## أدوات M69 التي أضيفت
+1. Scripts/M69_Android_Device_Evidence_ReadOnly.sh: أدوات adb على كمبيوتر متصل بهاتف اختبار به اللعبة مثبتة وتعمل بالفعل، تجمع معلومات ذاكرة/حرارة/إطارات داعمة لمدة 15 دقيقة افتراضياً. لا تبدأ اللعبة ولا تنصبها ولا تغير الجهاز ولا ترفع السجلات؛ لا تثبت FPS النهائي.
+2. Docs/M69_AndroidQualityProfiles_CANDIDATE.ini: ملفات جودة مرشحة للبحث وليست مفعلة؛ لا تنسخها إلى Config مباشرة.
+
+## المراجع الرسمية
+- Google Play API 36: https://support.google.com/googleplay/android-developer/answer/11926878
+- Unreal Engine 5.8 Android profiles: https://dev.epicgames.com/documentation/en-us/unreal-engine/customizing-device-profiles-and-scalability-in-unreal-engine-projects-for-android
+- Epic Android profiling: https://dev.epicgames.com/documentation/unreal-engine/how-to-use-unreal-insights-to-profile-android-games-for-unreal-engine
+- Google Android ADPF thermal: https://developer.android.com/games/optimize/adpf/best-practices-adpf
+- Android 16KB pages: https://developer.android.com/guide/practices/page-sizes
+- GitHub Actions legitimate project use: https://docs.github.com/en/site-policy/github-terms/github-terms-for-additional-products-and-features
+
+## أول إجراء تنفيذي تالٍ
+اجمع نتيجة M68 read-only من VM الحالية، ثم تحقق من تحميل الخريطة في Unreal، وأصلح خطأ Cook إن ظهر. لا تبدأ build ثقيل أو تخصّص موازنة رسومات نهائية أو ترفع AAB قبل ذلك.
