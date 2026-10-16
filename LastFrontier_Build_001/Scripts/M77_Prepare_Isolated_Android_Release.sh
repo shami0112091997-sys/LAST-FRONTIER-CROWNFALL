@@ -39,7 +39,9 @@ DEST="$OUT/M77_v${NEXT}_$(date -u +%Y%m%dT%H%M%SZ)"
 [[ ! -e "$DEST" ]] || stop STAGE_ALREADY_EXISTS
 mkdir -p "$DEST"
 chmod 700 "$DEST"
-rsync -a --exclude="Saved/" --exclude="Intermediate/" --exclude="Binaries/" --exclude="DerivedDataCache/" --exclude=".git/" "$S/" "$DEST/" || stop COPY_FAILED
+[[ -z "$(find "$S/Content" -type l -print -quit)" ]] || stop CONTENT_SYMLINKS_UNSAFE
+rsync -a --exclude="Saved/" --exclude="Intermediate/" --exclude="Binaries/" --exclude="DerivedDataCache/" --exclude=".git/" \
+  --exclude="*.jks" --exclude="*.keystore" --exclude="*.p12" --exclude="*.pem" "$S/" "$DEST/" || stop COPY_FAILED
 [[ "$(sha256sum "$DEST/Content/Maps/TestMap.umap" | cut -d' ' -f1)" == "$B" ]] || stop MAP_COPY_HASH_MISMATCH
 python3 - "$DEST/Config/DefaultEngine.ini" "$NEXT" <<'PY'
 import pathlib,re,sys
