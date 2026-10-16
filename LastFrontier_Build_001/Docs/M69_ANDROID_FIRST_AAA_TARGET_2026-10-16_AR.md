@@ -156,3 +156,11 @@
 - Build command started as: UE_5.8.3/Engine/Build/BatchFiles/Linux/Build.sh LastFrontierEditor Linux Development <staged>/LastFrontier.uproject -NoHotReloadFromIDE -Progress, wrapped in timeout 1800 with output redirected to $HOME/crownfall/M70_EDITOR_COMPILE.log.
 - Latest screenshot has a waiting cursor and **does not show M70_COMPILE_EXIT or M70_MAP_UNCHANGED**. Therefore compile success or failure NOT VERIFIED. Do not re-run builds or start Cook; wait for terminal completion, then interpret actual return code and preserved map diff.
 - Compile is real work on the existing VM, not a detached background automation. Source project original should remain untouched; until finished, no new command in same shell.
+
+
+## M70 real Editor compile PASS — screenshot 2026-10-16 08:40
+- Confirmed actual VM shell output from screenshot: M70_PREFLIGHT=PASS; M70_COMPILE_EXIT=0; Result: Succeeded; M70_MAP_UNCHANGED=PASS.
+- Compile ran on isolated stage: $HOME/crownfall/M70_ANDROID_STAGE_20261016T053500Z; original is $HOME/crownfall/M63_REAL_MOBILE/LastFrontier_Build_001.
+- Exact compile report: $HOME/crownfall/M70_EDITOR_COMPILE.log. Compile verifies LastFrontierEditor on Linux with UE5.8.3; no new Android Cook/Package or AAB tested.
+- Next gate: controlled UE Python commandlet load-only /Game/Maps/TestMap on M70 stage with sha256 checks of original and staged TestMap before/after. PythonScriptPlugin and EditorScriptingUtilities were confirmed enabled on VM; LevelEditorSubsystem.load_level returns bool per official UE5.8 docs. No SaveMap, no original M63 editor tools.
+- Only after map load passes and version/signing decisions resolved should run a single Shipping Android build. No false claim of production readiness.
