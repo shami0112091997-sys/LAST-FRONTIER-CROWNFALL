@@ -249,3 +249,11 @@ print("M71_WORLD_OK")
 - Latest true compiler result M70_COMPILE_EXIT=0; M71 Python script successful with both asserted world/package checks and integrity PASS, but script's log-string gate false negative because print did not forward.
 - **No Android Cook, Package, signed AAB, real phone performance, or Play Console highest version check** performed as of this capture. Previous Play history says 217 while staged StoreVersion=216. Do not attempt Play upload with 216.
 - Next safe action: assess stage assets, configs and cooked-map list; inspect Android build readiness before making a deliberate controlled BuildCookRun. Avoid running CI or mutating the live M63 project.
+
+
+## M72 to M73 controlled Android ASTC Cook — 2026-10-16
+- Actual screenshot M72 PASS: 4 required file checks, M72_MAP=PASS, 23 .uasset files, package com.crownfall.stronghold, StoreVersion=216, TargetSDKVersion=36, bBuildForArm64=True, bEnableBundle=True; disk 243GB total/133GB available.
+- Official Epic UE5.8 Cooking Content docs confirm independent -run=Cook with TargetPlatform; Android ASTC target appears in actual Epic Android cook logs. Cook creates platform-specific assets under staged project's Saved directory, NOT an AAB.
+- Added Scripts/M73_Android_ASTC_Cook_Stage_Only.sh; source is guarded by map byte comparison, project/engine existence, minimum 60GiB free disk, time limit 45 minutes, original-vs-staged map SHA256 after execution, returns exact exit code and inspects log. Never calls signing, Android package, store upload, or gcloud API; no deletion of original.
+- Command passed local bash -n syntax validation; not yet executed on user's VM. A zero exit by itself is not proof of full Play-ready Shipping binary. If any failure occurs, stop and inspect log rather than repeating blindly.
+- Highest Play Console versionCode remains unverified, source 216 is under previously recorded Play line 217; cook-only may use version 216 as it cannot be uploaded. Production staged release must adopt code strictly above confirmed Play max.
