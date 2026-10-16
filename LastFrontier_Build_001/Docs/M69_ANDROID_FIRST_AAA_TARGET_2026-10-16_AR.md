@@ -206,3 +206,12 @@
 - Before invoking engine: compare live and stage TestMap binaries, record SHA-256, verify required paths, Python3 compile checks. After engine: compare both hashes, verify explicit M71_WORLD_OK and zero exit, check critical errors. Time limit 600s.
 - Script passed local Bash syntax and Python AST parsing plus mock gate checks (normal PASS simulation and mutated source preflight reject). It has NOT run on the user's actual UE VM.
 - Need M71_UNREAL_EXIT=0, M71_MAP_INTEGRITY=PASS, M71_WORLD_TEST=PASS before next Cook gate. Map package test not equivalent to gameplay runtime test.
+
+
+## M71 actual VM probe results — 2026-10-16 09:17
+- Screenshot is a live result from crownfall-m62-build: M71_UNREAL_EXIT=0; M71_MAP_INTEGRITY=PASS; M71_WORLD_TEST=FAIL.
+- Logged nonfatal warnings shown by grep: "Failed to find game directory: /home/shami0112091997/UE_5.8.3/LastFrontier/Binaries" and ACL/AnimBone compression settings object missing. No screenshot evidence of a LogLinker serialization error or failure to load the TestMap asset.
+- The result gate requires an exact M71_WORLD_OK marker. The screenshot did not show that marker, so do **not** treat an engine exit code 0 as proof that the package/world probe ran successfully. No new Cook/Android build initiated.
+- Next step must be READ-ONLY log forensics, not repeat execution: show contents of $HOME/crownfall/M71_world_probe.py and match LogPython/PythonScriptCommandlet/TestMap/M71_WORLD_OK/ExitCode from $HOME/crownfall/M71_world_probe.log, including tail. Decide from evidence whether Python commandlet ran and why marker not present.
+- Earlier M63 C++ load-only commandlet confirmed package/world PASS historically. If M71 was silently skipped by Python plugin or command-line dispatch, prefer proven C++ load-only mode on staged M70 after inspecting source for no-save behavior.
+- Epic UE5.8 script docs allow -run=pythonscript -script=absolute_file.py in headless mode; they also explicitly state level-loading in commandlet can be tricky. Do not invent an API root cause without log evidence.
