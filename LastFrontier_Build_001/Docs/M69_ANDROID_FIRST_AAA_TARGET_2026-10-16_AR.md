@@ -191,3 +191,9 @@
 - The script resolves authoritative M63 and staging M70 paths, requires matching map SHA256 before launching the staged project's UnrealEditor-Cmd, sets a 600-second timeout, checks an explicit print marker and all critical error patterns, then checks the original and staged map SHA256 against pre-run snapshots. It never invokes SaveMap, Cook, BuildCookRun, or Google Play publish.
 - Source original: $HOME/crownfall/M63_REAL_MOBILE/LastFrontier_Build_001. Staged: $HOME/crownfall/M70_ANDROID_STAGE_20261016T053500Z. Unreal: $HOME/UE_5.8.3.
 - **No new M70 map load PASS yet.** Do not proceed to Android Shipping until the user reports the script's actual M70_LOAD_EXIT and M70_MAP_INTEGRITY, or equivalent directly verified engine log.
+
+## M70 map-load commandlet outcome — 2026-10-16 08:56
+- Actual VM screenshot shows M70_LOAD_EXIT=255; M70_MAP_INTEGRITY=PASS; M70_LOAD_TEST=FAIL.
+- Real Unreal Python log says AttributeError: module 'unreal' has no attribute 'get_editor_subsystem', when called from headless -run=pythonscript; the Python script exception caused Unreal commandlet exit -1/255. This is a missing API in the current commandlet environment, **not evidence of corrupt map**. No current source file damage is visible; explicit map integrity matched.
+- Epic UE5.8 documentation cautions that headless Python commandlet is tricky for level-loading. 5.8 Python API lists unreal.load_package(name) and unreal.find_object(outer,name,type). Use those to inspect UPackage / UWorld in M70 stage instead of trying get_editor_subsystem again. Code is syntactically checked locally (Bash -n, Python compile), but Unreal run is still PENDING. No SaveMap, no mutations or Cook until a real PASS.
+- Next target: M70_WORLD_EXIT=0, M70_WORLD_LOAD_TEST=PASS, M70_MAP_INTEGRITY=PASS, plus absence of relevant LogLinker serialization errors. A pass proves package/world load only, not complete level simulation, performance or Android cook.
