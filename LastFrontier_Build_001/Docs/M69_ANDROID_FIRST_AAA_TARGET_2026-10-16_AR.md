@@ -128,3 +128,14 @@
 - Live project config previously reported StoreVersion=216, history references Play code 217. Version for next release remains blocked until highest Play Console code confirmed.
 - Real map load-only M63 PASS is historical. Still no verified Shipping AAB or on-device measured FPS.
 - No automatic resource provisioning, cloud sign-in, app upload, or source mutation in this checkpoint.
+
+
+## Screenshot 2026-10-16 08:29 — Android build tools complete
+- This is an observed screenshot of a local read-only VM shell test, not a UAT/Turnkey or Cook pass.
+- Android SDK build tools include 35.0.1; required 35.0.1/aapt2 and zipalign: PASS.
+- SDK platforms/android-36/android.jar: PASS.
+- NDKROOT/source.properties: PASS; Pkg.Revision = 27.2.12479018 (r27c).
+- JAVA_HOME/bin/javac: PASS; earlier Java 21 was confirmed.
+- UE 5.8 official requirements: NDK r27c, Build Tools 35.0.1, JDK21, recommended target SDK35. Google Play after Aug 31 2026 requires target SDK36 for new/updated regular Android apps: actual packaging support must be validated; do not claim UE5.8 supports API36 from installed sdk files alone.
+- NEXT GATE: UE Turnkey -command=VerifySdk -Platform=Android (not InstallSdk, not ExecuteBuild) from already-present RunUAT.sh; capture output/exit code. VerifySdk is specified by official Epic CLI docs to inspect local SDK version compatibility, without invoking packaging. Engine AutomationTool may update its own temporary build artifacts or logs, but do not modify the game source.
+- Keep project originals unchanged, do not publish or use current 216 as final version; Play Console earlier 217 remains historical until checked.
