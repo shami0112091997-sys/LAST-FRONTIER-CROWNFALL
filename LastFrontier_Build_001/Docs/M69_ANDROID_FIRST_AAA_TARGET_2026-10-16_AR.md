@@ -517,3 +517,9 @@ print("M71_WORLD_OK")
 - User had just emphasized that they wanted AAA target and asked `أين AAA`; do not conflate M89 successful technical staging with production AAA. Recommend a gated **playable Android test build** for visual/performance profiling followed by environment, characters, animation, combat and content polish on realistic mobile budgets before public Play release.
 - Current authoritative technical progression M78 Android Shipping compile PASS; M85 Editor/TestMap load PASS; M86 Cook 220 packages PASS; M87 game content ~71 MB + Android compiled binary PASS; M88 Stage/PAK PASS 5 archives; M89 stage gate YES. No Play upload or external QA performed in this step.
 - Official UE5.8 packaging stages https://dev.epicgames.com/documentation/unreal-engine/build-operations-cooking-packaging-deploying-and-running-projects-in-unreal-engine?lang=en-US . Android Upload key: https://developer.android.com/studio/publish/app-signing.
+
+
+## M90 QA-only package scripted but not executed — 2026-10-16
+- Created protected QA-only UAT script `Scripts/M90_Android_QA_Package_From_M88_Staged_Only.sh` for M84 (not M77). Guards original maps, stage five archives, 218 package+target SDK config, Android binary, no previous output AAB or log, >30GiB free.
+- Script's intended flags: `BuildCookRun -project=<M84> -platform=Android -cookflavor=ASTC -clientconfig=Shipping -skipbuild -skipcook -skipstage -skippak -package -unattended -utf8output`, with bounded timeout; prints output AAB/APK bytes and maps unchanged. No Distribution, no private-key import, no upload, no remote credentials. Engine may create debug-signed QA bundle; **never submit to Play**. Verify signature and cooked payload in a separate audit, then test on real phone to guide AAA visual/performance work.
+- **M90 has NOT yet been executed on user's VM**, and no QA AAB, signed release artifact, successful on-phone visual test or AAA quality claim is made.
