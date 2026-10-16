@@ -57,7 +57,12 @@ s=re.sub(r"(?m)^StoreVersion=\d+(?=\r?$)","StoreVersion="+sys.argv[2],s,count=1,
 p.write_text(s)
 PY
 grep -Fqx "StoreVersion=$NEXT" "$CFG" || stop VERSION_NOT_UPDATED
-# Load the map through REAL Unreal Python editor commandlet. This is on stage only.
+"$UE/Engine/Build/BatchFiles/Linux/Build.sh" LastFrontierEditor Linux Development "$PROJ" \
+ -NoHotReloadFromIDE -Progress > "$RUN/logs/editor.log" 2>&1 || {
+ tail -n 100 "$RUN/logs/editor.log"; stop EDITOR_BUILD_FAILED;
+}
+echo "M68_REAL_EDITOR_BUILD=PASS"
+# Load the map through REAL Unreal Python editor commandlet AFTER compiling staged game module.
 cat > "$RUN/logs/verify_map.py" <<'PY'
 import unreal
 world=unreal.EditorLoadingAndSavingUtils.load_map("/Game/Maps/TestMap")
@@ -76,11 +81,7 @@ if (( RC != 0 )) || ! grep -Fq M68_MAP_LOADED_OK "$RUN/logs/map.log" ||
  tail -n 80 "$RUN/logs/map.log"; stop MAP_LOAD_FAILED
 fi
 echo "M68_REAL_MAP_LOAD=PASS"
-"$UE/Engine/Build/BatchFiles/Linux/Build.sh" LastFrontierEditor Linux Development "$PROJ" \
- -NoHotReloadFromIDE -Progress > "$RUN/logs/editor.log" 2>&1 || {
- tail -n 100 "$RUN/logs/editor.log"; stop EDITOR_BUILD_FAILED;
-}
-echo "M68_REAL_EDITOR_BUILD=PASS"
+
 # Locally configured upload signing must already be present. Never print passwords.
 "$UE/Engine/Build/BatchFiles/RunUAT.sh" BuildCookRun -project="$PROJ" -noP4 \
  -platform=Android -cookflavor=ASTC -clientconfig=Shipping \
@@ -112,4 +113,6 @@ sha256sum "$AAB" > "$RUN/logs/AAB_SHA256.txt"
 echo "M68_SIGNED_AAB_BUILT_AND_STRUCTURALLY_AUDITED=$AAB"
 echo "M68_READY_FOR_PLAY_UPLOAD=NO"
 echo "PENDING=VERIFY_PACKAGE_VERSION_VIA_BUNDLETOOL_UPLOAD_CERT_FINGERPRINT_16KB_APK_ALIGNMENT_DEVICE_TEST_AND_PLAY_CONSOLE_POLICY"
+FINAL_HASH="$(sha256sum "$SRC/Content/Maps/TestMap.umap" | cut -d' ' -f1)"
+test "$FINAL_HASH" = "$ORIG_HASH" || stop LIVE_MAP_CHANGED
 echo "SOURCE_VM_PROJECT_MODIFIED=NO"
