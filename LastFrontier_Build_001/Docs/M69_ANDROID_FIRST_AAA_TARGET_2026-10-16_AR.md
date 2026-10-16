@@ -111,3 +111,10 @@
 - free -h: RAM total 31GiB، used 389MiB، free 26GiB، available ~30GiB؛ swap total 15GiB، used 3.0MiB. هذه **قراءة الموارد** لا تثبت نجاح Unreal عند التشغيل.
 - SHA256 لخريطة M63 TestMap.umap: 591855a572cb07a8fd6775f546b6ff818e706b9b62d09050f0533268b2edfad7 (يجب إعادة المقارنة إن ظهر تعارض كتابة).
 - الاستنتاج: commandlet المصدر موجود، المكونات التحريرية مفعلة والموارد جيدة مبدئياً؛ **اختبار تحميل الخريطة الحالي ما زال غير منفذ**. الخطوة التالية قراءة C++ commandlet لمعرفة بارامتر load-only والتأكد من عدم تنفيذ save/atomic mutation قبل تشغيله.
+
+
+## فحص لقطة 16 أكتوبر 2026 08:23 (سجل M63 السابق)
+- من سجل M63_CPP_LOAD_ONLY_RUN.log المؤرخ 2026-10-14: CROWNFALL_CPP_LOAD_ONLY_STARTED=PASS, LOAD_PACKAGE=PASS, PACKAGE_NAME=/Game/Maps/TestMap, PACKAGE_CONTAINS_MAP=TRUE, FIND_WORLD_IN_PACKAGE=PASS, WORLD_NAME=TestMap, CROWNFALL_CPP_LOAD_ONLY=PASS. سجل تاريخي ناجح **لا يثبت إعادة الاختبار اليوم أو نجاح Cook أو Android**.
+- في المصدر الحي Source/LastFrontierEditor/Private/CrownfallAtomicMapCommandlet.cpp ظهرت UEditorLoadingAndSavingUtils::SaveMap(World, Dst) في السطر 87؛ هذا commandlet **يكتب خرائط ولا يصلح كأداة قراءة فقط**. لا تشغّله على مشروع VM الأصلي. يجب فحص اسم destination والسلوك الفعلي، واستخدام نسخة معزولة فقط.
+- أبلغ المستخدم استمرار ظهور تحذيرات ACL مع الاختبارات السابقة. لم تظهر هنا قرينة تربطها بفشل التحميل.
+- الخطوة التالية: فحص أدلة CLI السابقة أو إنشاء probe مستقل آمن ثم اختبار على staged copy، مع نسخ احتياطي وSHA256.
