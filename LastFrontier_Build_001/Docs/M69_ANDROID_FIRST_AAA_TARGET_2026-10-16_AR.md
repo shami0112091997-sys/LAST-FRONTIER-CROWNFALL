@@ -118,3 +118,13 @@
 - في المصدر الحي Source/LastFrontierEditor/Private/CrownfallAtomicMapCommandlet.cpp ظهرت UEditorLoadingAndSavingUtils::SaveMap(World, Dst) في السطر 87؛ هذا commandlet **يكتب خرائط ولا يصلح كأداة قراءة فقط**. لا تشغّله على مشروع VM الأصلي. يجب فحص اسم destination والسلوك الفعلي، واستخدام نسخة معزولة فقط.
 - أبلغ المستخدم استمرار ظهور تحذيرات ACL مع الاختبارات السابقة. لم تظهر هنا قرينة تربطها بفشل التحميل.
 - الخطوة التالية: فحص أدلة CLI السابقة أو إنشاء probe مستقل آمن ثم اختبار على staged copy، مع نسخ احتياطي وSHA256.
+
+
+## Android toolchain screenshot checkpoint 2026-10-16 08:26
+- Server: crownfall-m62-build (user already connected in SSH shell).
+- Screenshot checked read-only: ANDROID_HOME and ANDROID_SDK_ROOT=/home/shami0112091997/Android/Sdk; NDKROOT=/home/shami0112091997/Android/Sdk/ndk/27.2.12479018; JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64.
+- Java shows OpenJDK 21.0.12.1, 64-bit. Installed SDK platforms: android-35 and android-36. Installed NDK: 27.2.12479018 (r27c). UE_5.8.3/Engine/Platforms/Android directory FOUND.
+- Epic UE5.8 Android docs recommend NDK r27c, Build Tools 35.0.1, JDK 21 and SDK 35. Google Play new apps/updates require API 36 from Aug 31 2026. Presence of SDK 36 is not proof UE's Android Gradle build supports target 36: next validate actual installed Build Tools 35.0.1, local SDK metadata, then Turnkey VerifySdk and staged package, without installing or changing anything blindly.
+- Live project config previously reported StoreVersion=216, history references Play code 217. Version for next release remains blocked until highest Play Console code confirmed.
+- Real map load-only M63 PASS is historical. Still no verified Shipping AAB or on-device measured FPS.
+- No automatic resource provisioning, cloud sign-in, app upload, or source mutation in this checkpoint.
