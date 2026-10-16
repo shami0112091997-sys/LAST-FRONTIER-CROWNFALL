@@ -164,3 +164,21 @@
 - Exact compile report: $HOME/crownfall/M70_EDITOR_COMPILE.log. Compile verifies LastFrontierEditor on Linux with UE5.8.3; no new Android Cook/Package or AAB tested.
 - Next gate: controlled UE Python commandlet load-only /Game/Maps/TestMap on M70 stage with sha256 checks of original and staged TestMap before/after. PythonScriptPlugin and EditorScriptingUtilities were confirmed enabled on VM; LevelEditorSubsystem.load_level returns bool per official UE5.8 docs. No SaveMap, no original M63 editor tools.
 - Only after map load passes and version/signing decisions resolved should run a single Shipping Android build. No false claim of production readiness.
+
+
+## منهج التدقيق الإلزامي لجميع الإجراءات — توجيه المستخدم 2026-10-16
+المستخدم يطلب: أعلى قدر متاح من البحث والعمق والدقة والتحقق من المصادر، وعدم التسرع أو تكرار الأخطاء، وتطبيق هذا المبدأ على **كل خطوة مستقبلية** في مشروع CROWNFALL.
+
+### بوابات إلزامية قبل/أثناء/بعد أي تنفيذ
+1. **قبل التنفيذ — جمع الحقائق:** ارجع أولًا إلى أحدث سجلات VM وGitHub والمخرجات الفعلية والصور، وميّز الأدلة المثبتة عن الفرضيات أو نتائج اختبارات قديمة. حدِّد البيئة والمسار والإصدار والتبعيات والهدف الدقيق.
+2. **التحقق من المصادر:** ارجع إلى الوثائق الرسمية ذات الصلة (Epic Unreal Engine 5.8.3، Android SDK/NDK، Google Play، GitHub وGoogle Cloud) وتحقق من صلاحية نسختها وتوافقها مع المطلوب. لا تعتمد على توجيهات أو حلول غير موثقة عندما تكون المصادر الأصلية متاحة.
+3. **مراجعة الأمر بالكامل:** افحص الصياغة والأقواس والاقتباسات والمسارات ومتغيرات البيئة وحقوق الوصول؛ لا تُصدر أمرًا للنسخ من الهاتف إلا بعد التأكد من أنه مناسب للـShell المقصود ولا يحوي نصوصًا غير قابلة للنسخ، وأنه لا يكتب فوق البيانات دون داعٍ.
+4. **الحماية أولًا:** العمل بنسخة stage منفصلة من M63؛ النسخ الاحتياطية ومقارنة SHA256 قبل وبعد؛ لا تغييرات في TestMap.umap أو .uasset الأصلية، ولا كشف JKS أو كلمات المرور أو الرموز الخاصة، ولا ترخيص/مشتريات أو تغيير إعدادات حسابات الإنتاج دون إذن.
+5. **اختبارات مرحلية قابلة للتحقق:** Prefight -> Compile -> load-map -> Cook -> Package -> signed AAB -> bundletool/16KB/API36/permissions/certificate -> real Android device thermal/FPS/crash tests -> Play Console checks. لا تُحسب الخطوة PASS بلا سجل تنفيذ أو نتيجة واضحة.
+6. **أدنى استخدام للموارد:** استخدم اختبارات القراءة فقط أولًا، ولا تُكرر CI مكلفًا أو تبدأ خوادم أو توسع موارد GCP دون حاجة وإذن؛ احترم شروط الاستخدام والحدود الرسمية للمنصات.
+7. **عند ظهور خطأ:** أوقف الخطوات التابعة فورًا، احفظ السجل، حدد السبب الجذري، استرجع الحالة الأصلية عند الحاجة، ثم اختبر الإصلاح في بيئة مستقلة، ولا تكرر أمرًا فاشلًا بشكل أعمى.
+8. **شفافية كاملة:** وضح ما نُفذ حقيقة وما بقي مجرد خطة، ولا تدّعِ وصول AAA أو وجود AAB نهائي أو نشر Google Play دون برهان. لا توجد طريقة لضمان صفر أخطاء، لكن يُلزم تطبيق وسائل المنع والتحقق أعلاه.
+9. **استمرارية:** سجّل النقطة التالية ونتيجة كل اختبار في هذا الملف/السجلات، حتى لا يبدأ العمل من الصفر في الجلسة التالية.
+
+### الحالة عند اعتماد المعيار
+آخر نتيجة موثقة بالصورة: M70_COMPILE_EXIT=0, Result Succeeded, M70_MAP_UNCHANGED=PASS. اختبار تحميل TestMap الأحدث عبر Python لم يُثبت نجاحه؛ الصورة 08:44 أظهرت أن الأمر لم يبدأ بسبب مشكلة نسخ ([cmd]: command not found). **الخطوة التالية هي تشخيص/إصلاح هذا الإشكال في تنفيذ الأمر مع مراجعة Shell قبل تشغيل اختبار الخريطة على M70، دون تجاوز بوابة الاختبار.**
