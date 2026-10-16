@@ -76,9 +76,13 @@ echo "M68_REAL_EDITOR_BUILD=PASS"
 # Load the map through REAL Unreal Python editor commandlet AFTER compiling staged game module.
 cat > "$RUN/logs/verify_map.py" <<'PY'
 import unreal
-world=unreal.get_editor_subsystem(unreal.LevelEditorSubsystem).load_level("/Game/Maps/TestMap")
-if world is None: raise RuntimeError("M68_MAP_INVALID")
-print("M68_MAP_LOADED_OK")
+package=unreal.load_package("/Game/Maps/TestMap")
+if package is None:
+    raise RuntimeError("M68_MAP_PACKAGE_MISSING")
+world=unreal.find_object(package, "TestMap", unreal.World)
+if world is None:
+    raise RuntimeError("M68_MAP_WORLD_MISSING")
+unreal.log("M68_MAP_LOADED_OK")
 PY
 set +e
 timeout 900 "$UE/Engine/Binaries/Linux/UnrealEditor-Cmd" "$PROJ" \
