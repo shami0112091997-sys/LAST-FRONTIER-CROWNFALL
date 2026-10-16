@@ -277,3 +277,13 @@ print("M71_WORLD_OK")
 - Reviewed Epic 5.8 Android Settings, Packaging and Distribution Signing docs. Signed Shipping AAB needs unique app ID, matching upload keystore/alias, correct StoreVersion, Shipping+Distribution, valid actual Android target; never ask for keystore passwords or dump signing config into logs.
 - Reviewed dormant Scripts/M68_Staged_Android_Build.sh and corrected its invalid headless get_editor_subsystem/print map probe to package=unreal.load_package, unreal.find_object(package,"TestMap",unreal.World) and unreal.log marker, aligned with M71's actually successful Python script. This is a source code fix committed to GitHub, not an executed M68 build.
 - Next gate M75: read-only staged packaging/signing/version readiness audit. No GPU/device testing has taken place; no AAB has been built or uploaded.
+
+
+## M75 actual VM Shipping preflight — 2026-10-16 09:55
+- Screenshot confirms `COOKED_MAP=PASS`, `MAP_INTEGRITY=PASS`, `M75_CHECK_COMPLETE`, `REAL_GAME_ASSETS=23`. Cooked M70 Android_ASTC assets are actually present.
+- Staged DefaultEngine.ini reports PackageName=com.crownfall.stronghold, StoreVersion=216, TargetSDKVersion=36, bBuildForArm64=True, bEnableBundle=True.
+- Signing fields checked in staged DefaultEngine.ini: `KeyStore=NOT_CONFIRMED` and `KeyAlias=NOT_CONFIRMED`. This is an incomplete-scope search, **not proof that signing files/keys do not exist elsewhere**. Protect all signing passwords, alias secrets, upload keystores; do not request them in chat or commit them.
+- Official Google Play requirements checked: same package as existing app, strictly greater versionCode, correct matching upload signature (Play App Signing). Epic UE 5.8 Android settings say keystore should be in <Project>/Build/Android and signing configuration under Distribution Signing.
+- The historical highest Play versionCode reference is 217, while M70 is 216; must confirm latest from Play Console before making a new staged release (218 is only a conditional candidate, not verified).
+- **No Android Shipping AAB actually built, signed, tested on device or uploaded yet.** Do not claim release readiness from M75 PASS.
+- Next action: small read-only check for existing local upload keystore files and field presence (without exposing values or searching secrets globally), then user checks Play Console version maximum and upload certificate. Do not generate a new upload key arbitrarily or alter M63.
