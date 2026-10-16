@@ -6,12 +6,12 @@ umask 077
 SRC="$HOME/crownfall/M63_REAL_MOBILE/LastFrontier_Build_001"
 UE="$HOME/UE_5.8.3"
 ROOT="$HOME/crownfall/M68_STAGED_BUILDS"
-NEXT="$NEXT_VERSION_CODE"
-MAX="$CONFIRMED_PLAY_MAX_CODE"
+NEXT="${NEXT_VERSION_CODE:-}"
+MAX="${CONFIRMED_PLAY_MAX_CODE:-}"
 stop(){ echo "M68_BLOCKED=$1"; exit 2; }
-test "$M68_BUILD_APPROVED" = YES || stop APPROVAL_REQUIRED
-test "$M68_ASSETS_APPROVED" = YES || stop VERIFY_VM_ASSETS_FIRST
-test "$M68_LOCAL_SIGNING_CONFIRMED" = YES || stop UPLOAD_KEY_NOT_CONFIRMED
+test "${M68_BUILD_APPROVED:-}" = YES || stop APPROVAL_REQUIRED
+test "${M68_ASSETS_APPROVED:-}" = YES || stop VERIFY_VM_ASSETS_FIRST
+test "${M68_LOCAL_SIGNING_CONFIRMED:-}" = YES || stop UPLOAD_KEY_NOT_CONFIRMED
 [[ "$NEXT" =~ ^[0-9]+$ && "$MAX" =~ ^[0-9]+$ ]] || stop VERSION_INVALID
 (( NEXT > MAX && NEXT > 217 )) || stop VERSION_NOT_ABOVE_PLAY
 test -f "$SRC/LastFrontier.uproject" || stop SOURCE_NOT_FOUND
@@ -36,6 +36,8 @@ echo "NO_ENGINE_DOWNLOAD=TRUE"
 echo "NO_PLAY_UPLOAD=TRUE"
 echo "SOURCE_ORIGINAL=$SRC"
 # Time-stamped isolated copy, excluding derived/temporary folders only.
+# Reject symlinked content to avoid accidentally acting on files outside staged source.
+if [[ -n "$(find "$SRC/Content" -type l -print -quit)" ]]; then stop SYMLINKED_CONTENT_NOT_SAFE; fi
 rsync -a --exclude='Saved/' --exclude='Intermediate/' --exclude='Binaries/' \
  --exclude='DerivedDataCache/' --exclude='.git/' "$SRC/" "$RUN/stage/" || stop COPY_FAILED
 PROJ="$RUN/stage/LastFrontier.uproject"
@@ -50,8 +52,8 @@ grep -Fqx 'bEnableBundle=True' "$CFG" || stop AAB_MISSING
 python3 - "$CFG" "$NEXT" <<'PY'
 import sys,re,pathlib
 p=pathlib.Path(sys.argv[1]);s=p.read_text()
-assert len(re.findall(r"^StoreVersion=\d+\s*$",s,re.M))==1
-s=re.sub(r"^StoreVersion=\d+\s*$","StoreVersion="+sys.argv[2],s,count=1,flags=re.M)
+assert len(re.findall(r"(?m)^StoreVersion=\d+(?=\r?$)",s,re.M))==1
+s=re.sub(r"(?m)^StoreVersion=\d+(?=\r?$)","StoreVersion="+sys.argv[2],s,count=1,flags=re.M)
 p.write_text(s)
 PY
 grep -Fqx "StoreVersion=$NEXT" "$CFG" || stop VERSION_NOT_UPDATED
