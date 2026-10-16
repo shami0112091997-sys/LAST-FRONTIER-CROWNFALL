@@ -287,3 +287,12 @@ print("M71_WORLD_OK")
 - The historical highest Play versionCode reference is 217, while M70 is 216; must confirm latest from Play Console before making a new staged release (218 is only a conditional candidate, not verified).
 - **No Android Shipping AAB actually built, signed, tested on device or uploaded yet.** Do not claim release readiness from M75 PASS.
 - Next action: small read-only check for existing local upload keystore files and field presence (without exposing values or searching secrets globally), then user checks Play Console version maximum and upload certificate. Do not generate a new upload key arbitrarily or alter M63.
+
+
+## M76 signing key file presence check — 2026-10-16 09:58
+- User screenshot confirms count `0` *.jks / *.keystore files in both original M63 and staged M70 `Build/Android` (each searched maxdepth 2), and `M76_READONLY_COMPLETE`.
+- This proves only absence in those two specific Build/Android folders, not loss of the upload key globally or that Play App Signing is not enrolled. Prior M75 found no explicit KeyStore/KeyAlias in staged DefaultEngine.ini, again not definitive beyond that file.
+- **Do not generate a replacement key now.** Consult the app's Play Console Play app signing status and Upload key certificate, confirm current highest versionCode on Latest releases and bundles, and check user's securely held original upload keystore or backup. Do not paste password, private keystore, tokens, key material or sensitive account data into chat/GitHub.
+- Verified current official Google Play docs https://support.google.com/googleplay/android-developer/answer/9842756 describe two keys (Upload key user-owned, App signing key Google-managed); if Play App Signing enabled and upload key truly lost, supported official upload-key reset via Play Console exists. Reference https://support.google.com/googleplay/android-developer/answer/9859350 states updates require same package, greater versionCode and correct signing. Historical code 217 remains unverified, current stage 216.
+- Actual CROWNFALL Android ASTC Cook completed with 0 errors and map/assets verified, but no correctly signed shipping AAB has been established yet.
+- Next user action: open Google Play Console for the CROWNFALL app and locate Play App Signing's Upload key certificate status; screenshot screen with private data hidden if possible. Only after that decide whether original key retrieval, reset flow, or package/sign testing is appropriate.
