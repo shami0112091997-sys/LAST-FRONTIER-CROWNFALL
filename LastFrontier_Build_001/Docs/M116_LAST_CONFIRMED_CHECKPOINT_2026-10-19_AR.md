@@ -7,7 +7,7 @@
 - تحذير self-signed على JAR الاختبار ليس فشل توقيع، ولكنه لا يثبت أن AAB النهائي موقّع أو مقبول في Google Play.
 
 ## مقارنة مع الحالة المحفوظة
-- آخر commit على `m66-smart-recovery` وقت المراجعة هو `0aeb7fe30b68e0d266db94f8a8468bc4d434b7b9`، يتناول M108 وإعداد M109؛ تقدم VM تجاوز ما هو موثق هناك.
+- آخر commit على `m66-smart-recovery` عند مراجعة 19 أكتوبر هو `e9ddb2465fdfca818a89fdc64d81d7f9b43109f8` (توثيق M113B/اختبار المفتاح المحلي). تقدم VM الظاهر في الصورة وصل M115، وهو أحدث من المحتوى الموثق في m66.
 - `M106_RELEASE_SANDBOX_v218` على VM نسخة مستقلة؛ يجب الحفاظ على `M63_REAL_MOBILE` و`M84_EDITOR_SANDBOX_v218` ونسخ JKS الأصلية.
 - في M90 وM91 ظهرت AAB Debug بسعة 73,612,837 بايت، ورفض Play إصدار Debug؛ لن نعيد توقيع هذه الحزمة ثم نسميها Release.
 - الـJKS المتوقع: `Build/Android/CROWNFALL_v0.8_upload_key.jks` داخل M106، alias `crownfall-upload`، مع مطابقة SHA-256 **لملف JKS** المعروف من سجل الاستعادة، وليس نشر المفتاح أو كلمة مروره.
@@ -24,3 +24,15 @@
 - استعمل توجيهات المالك في ملف `PROJECT_OPERATING_RULES_2026-10-19_AR.md` بفرع `policy/safe-work-rules-2026-10-19`.
 - إرشادات Epic: https://dev.epicgames.com/documentation/en-us/unreal-engine/signing-android-projects-for-release-on-the-google-play-store-with-unreal-engine
 - إعدادات UE Android: https://dev.epicgames.com/documentation/unreal-engine/android-settings-in-the-unreal-engine-project-settings
+
+## إضافة مراجعة أمنية — بوابة M116 المحسنة (19 أكتوبر 2026)
+- تم تحديث `Scripts/M116_Release_Signing_ReadOnly_Gate.sh` إلى مراجعة ثانية أكثر تحفظًا. لا تُصدر أمر Build، ولا تفتح JKS، ولا تطلب كلمة مرور، ولا تطبع قيم إعدادات التوقيع أو تعدل ملفات الـVM.
+- تقرأ فقط وجود .uproject وTestMap الأصلية والمطبوخة وملف Shipping arm64 وRunUAT، وتتحقق من إعدادات Shipping/Distribution وPackageName وStoreVersion 218 وTargetSDKVersion 36 وBundle.
+- تفحص ملف JKS المحلي فقط: عدم وجود symbolic link، مالك الملف، صلاحيات وصول المجموعة والآخرين، وتطابق SHA256 **للملف** مع البصمة الموثقة سابقًا؛ لا تعني مطابقة البصمة أن كلمة المرور أو إعداد Unreal للتوقيع صحيحة.
+- تفحص حقول KeyStore وKeyAlias وKeyStorePassword في `DefaultEngine.ini` دون طباعة قيمة كلمة المرور. KeyPassword يمكن أن تكون فارغة إذا تطابقت مع كلمة مرور Keystore بحسب إرشادات Epic.
+- إذا ظهر حقل كلمة مرور في Config قابل للقراءة من المجموعة/الآخرين، تتوقف البوابة. وإذا كانت القيمة موجودة في إعداد خاص محدود الوصول، تصنفها للمراجعة ولا تعتبر ذلك إثبات توقيع نهائي.
+- **مخرجات مرحلة M116 المحسنة مقصودة على شكل HOLD:** `M116_AUDIT_COMPLETE=PASS` يعني اكتمال فحصها المحدود فقط، و`M116_RELEASE_BUILD_AUTHORIZED=NO` مع `M116_GATE=HOLD_FOR_PRIVATE_SIGNING_SETUP` يعني أن بناء Release ما زال معلقًا لحين إعداد توقيع خاص آمن وفحص حالة versionCode في Play. رمز الخروج 3 عند انتهاء الفحص بلا خطأ هو إيقاف سلامة مقصود، وليس تعطل Unreal.
+- اختبارات محلية اصطناعية سبعة للفحص (دون أي JKS حقيقي أو كلمات مرور حقيقية): الحالة الأساسية، مفتاح مفقود، رقم إصدار غير صحيح، أذونات مفتاح متساهلة، Intermediate/Android موجود، كلمة مرور في ini قابل للقراءة، وكلمة مرور في ini محدود الوصول — جميعها طابقت النتائج المتوقعة. **هذا ليس تنفيذًا على VM.**
+- اختبارات محلية بأداة sha256sum اصطناعية تؤكد التفرع المنطقي للسكربت فقط؛ لم يتم تقديم دليل حقيقي جديد على صحة ملف JKS الموجود على VM ولا على Build.
+- لا ترفع أي ملفات خاصة إلى GitHub أو تعيد استخدام AAB القديم بتوقيع Debug. لا تغيّر main أو m66 أو M63/M84، ولا تعيد كتابة TestMap.
+- التالي: تشغيل البوابة المحسنة على **VM الأصلية** ضمن جلسة موثوقة ومراجعة مخرجاتها غير السرية؛ بعدها تجهيز توزيع Signing مؤقت ومحدود الصلاحيات دون نشر الأسرار أو حفظها في GitHub؛ ثم بناء Release مضبوط واحد مع فحص bundleRelease وAndroid manifest والشهادة والأصول، وبعدها اختبار داخلي على الجهاز.
