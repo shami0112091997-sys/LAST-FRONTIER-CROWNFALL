@@ -55,3 +55,10 @@
 - App version explorer: https://support.google.com/googleplay/android-developer/answer/9859152
 - 16 KB page-size guidance: https://developer.android.com/guide/practices/page-sizes
 - Bundletool: https://developer.android.com/tools/bundletool
+## بوابة Google Play Version — تحقق مباشر من لقطة الشاشة (19 أكتوبر 2026، 03:54 بتوقيت قطر)
+- فتح المالك شاشة **جميع حزم التطبيقات / All app versions** في حساب Play Console الخاص باللعبة. تظهر عبارة **5 إصدارات للتطبيق** وصفحة **1–5 من 5**.
+- القائمة كاملة كما ظهرت في الصورة: `217 (2.2.0)`، `216 (2.2.0)`، `215 (2.2.0)`، `214 (2.1.2)`، `212 (2.1.2)`.
+- **218 غير معروض ضمن أي من الإصدارات الخمسة في هذه الصفحة عند التصوير**؛ لذا `versionCode=218` هو الإصدار التالي المرشح، بشرط عدم حدوث رفع أحدث أثناء البناء ووجود أي إصدار بحالة معلقة في موضع آخر.
+- إثبات وجود 217 لا يعني أن 218 موقعة أو مبنية: الحالة الفعلية لنسخة Unreal Release هي `NOT_BUILT_OR_UPLOADED` حتى آخر صورة.
+- الانتقال إلى M117 Preflight للقراءة فقط، ثم تجهيز Distribution Signing داخل M106 وحده، ثم `bundleRelease` جديد، فحص AAB والمحتوى و16 KB قبل رفع الاختبار الداخلي. ممنوع إعادة توقيع حزمة M90 Debug واعتبارها Release.
+- المصدر المرئي: صورة Play Console المرسلة بالمحادثة، التاريخ المحلي 19 أكتوبر 2026 ~03:54. المرجع الرسمي: https://support.google.com/googleplay/android-developer/answer/9844279/inspect-app-versions-with-the-app-bundle-explorer
