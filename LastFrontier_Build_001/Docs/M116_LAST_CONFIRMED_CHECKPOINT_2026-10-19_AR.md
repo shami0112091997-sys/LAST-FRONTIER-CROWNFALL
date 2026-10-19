@@ -48,3 +48,11 @@
 - التشخيص: اسم الـJKS والـalias مضبوطان لكن `KeyStorePassword` غير مضبوط في `Config/DefaultEngine.ini` الخاص بـM106. هذا **لا** يعني تلف أو فقدان كلمة المرور الأصلية؛ سجلات M114 أثبتت نجاح التوقيع التجريبي.
 - تعليمات السلامة: لا تدخل كلمة المرور في GitHub أو المحادثة أو مخرجات `grep` أو سطر الأوامر؛ التحقق التالي SHA-256 للـJKS ومُلكيته والصلاحيات فقط، ثم تصميم مسار توقيع مؤقت وخاص وفق Unreal 5.8 قبل أي Build Release. لا تمس الأصل M63/M84 ولا تعرض أية أسرار.
 - مصادر رسمية: https://dev.epicgames.com/documentation/en-us/unreal-engine/android-settings-in-the-unreal-engine-project-settings ؛ https://dev.epicgames.com/documentation/en-us/unreal-engine/signing-android-projects-for-release-on-the-google-play-store-with-unreal-engine
+
+## نتيجة موثقة جديدة — M116 JKS Integrity من صورة VM (19 أكتوبر 2026 ~03:03 بتوقيت قطر)
+- نفّذ المالك عبر SSH على `crownfall-m62-build` فحصًا للقراءة فقط للملف `$HOME/crownfall/M106_RELEASE_SANDBOX_v218/Build/Android/CROWNFALL_v0.8_upload_key.jks`.
+- مخرجات الصورة: `M116_KEY_SHA256=PASS`, `M116_KEY_PERMISSIONS=PASS`, `M116_KEY_AUDIT_COMPLETE`.
+- الفحص قارن SHA-256 لملف JKS مع البصمة المعروفة مسبقًا؛ واختبر أن صلاحيات الملف `600` أو `400`، ولم يعرض كلمة المرور أو يستخدم المفتاح للتوقيع.
+- نطاق النتيجة: تطابق ملف JKS والموافقة على معيار الصلاحيات المختصر؛ **ليس** دليل صحة إعداد KeyStorePassword في Unreal، ولا بناء AAB Release جديد، ولا قبول Play.
+- آخر عائق معروف: `M116_KeyStorePassword=NOT_SET` في `Config/DefaultEngine.ini` الخاص بالـM106 sandbox، بينما `KeyStore=SET` و`KeyAlias=SET`. لا تُدخل كلمة مرور في محادثة أو GitHub أو أمر ظاهر.
+- الخطوة التالية: فحص مالك وصلاحيات `DefaultEngine.ini` دون طباعة محتوى الملف أو أي سر؛ ثم اعتماد أسلوب مؤقت وآمن لتزويد إعداد Distribution Signing بالاعتماد الصحيح في sandbox وحده، والتحقق من versionCode في Play قبل بناء Release واحد. أبقِ `main` و`m66` ومجلدات M63/M84 كما هي.
