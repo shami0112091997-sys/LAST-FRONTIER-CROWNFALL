@@ -36,3 +36,15 @@
 - اختبارات محلية بأداة sha256sum اصطناعية تؤكد التفرع المنطقي للسكربت فقط؛ لم يتم تقديم دليل حقيقي جديد على صحة ملف JKS الموجود على VM ولا على Build.
 - لا ترفع أي ملفات خاصة إلى GitHub أو تعيد استخدام AAB القديم بتوقيع Debug. لا تغيّر main أو m66 أو M63/M84، ولا تعيد كتابة TestMap.
 - التالي: تشغيل البوابة المحسنة على **VM الأصلية** ضمن جلسة موثوقة ومراجعة مخرجاتها غير السرية؛ بعدها تجهيز توزيع Signing مؤقت ومحدود الصلاحيات دون نشر الأسرار أو حفظها في GitHub؛ ثم بناء Release مضبوط واحد مع فحص bundleRelease وAndroid manifest والشهادة والأصول، وبعدها اختبار داخلي على الجهاز.
+
+## نتيجة VM جديدة: فحص M116 الأولي من صورة 19 أكتوبر 2026 ~03:01 بتوقيت قطر
+- الصورة المباشرة بعد اتصال SSH بالخادم الأصلي `crownfall-m62-build` تظهر:
+  - `M116_KEY=FOUND` (وجود غير فارغ، لم يُقارن SHA أو الصلاحيات في هذا الفحص).
+  - `M116_KeyStore=SET`.
+  - `M116_KeyAlias=SET`.
+  - `M116_KeyStorePassword=NOT_SET`.
+  - `M116_READONLY_CHECK_COMPLETE`.
+- هذا فحص Bash مختصر للوجود وأسماء إعدادات التوقيع وليس تشغيل سكربت `M116_Release_Signing_ReadOnly_Gate.sh` الكامل؛ لم يحدث `M116_READONLY_GATE=PASS` ولا `bundleRelease` ولا إصدار AAB جديد.
+- التشخيص: اسم الـJKS والـalias مضبوطان لكن `KeyStorePassword` غير مضبوط في `Config/DefaultEngine.ini` الخاص بـM106. هذا **لا** يعني تلف أو فقدان كلمة المرور الأصلية؛ سجلات M114 أثبتت نجاح التوقيع التجريبي.
+- تعليمات السلامة: لا تدخل كلمة المرور في GitHub أو المحادثة أو مخرجات `grep` أو سطر الأوامر؛ التحقق التالي SHA-256 للـJKS ومُلكيته والصلاحيات فقط، ثم تصميم مسار توقيع مؤقت وخاص وفق Unreal 5.8 قبل أي Build Release. لا تمس الأصل M63/M84 ولا تعرض أية أسرار.
+- مصادر رسمية: https://dev.epicgames.com/documentation/en-us/unreal-engine/android-settings-in-the-unreal-engine-project-settings ؛ https://dev.epicgames.com/documentation/en-us/unreal-engine/signing-android-projects-for-release-on-the-google-play-store-with-unreal-engine
