@@ -62,3 +62,12 @@
 - إثبات وجود 217 لا يعني أن 218 موقعة أو مبنية: الحالة الفعلية لنسخة Unreal Release هي `NOT_BUILT_OR_UPLOADED` حتى آخر صورة.
 - الانتقال إلى M117 Preflight للقراءة فقط، ثم تجهيز Distribution Signing داخل M106 وحده، ثم `bundleRelease` جديد، فحص AAB والمحتوى و16 KB قبل رفع الاختبار الداخلي. ممنوع إعادة توقيع حزمة M90 Debug واعتبارها Release.
 - المصدر المرئي: صورة Play Console المرسلة بالمحادثة، التاريخ المحلي 19 أكتوبر 2026 ~03:54. المرجع الرسمي: https://support.google.com/googleplay/android-developer/answer/9844279/inspect-app-versions-with-the-app-bundle-explorer
+
+## نتيجة M117 الفعلية — محاذاة مكتبة Android الرئيسية
+- صورة الطرفية بتاريخ 19 أكتوبر 2026، نحو 04:10 بتوقيت قطر من خادم `crownfall-m62-build`، داخل M106 sandbox، تعرض `M117_LOAD_SEGMENTS=4` و`M117_NATIVE_16KB=PASS` و`M117_NATIVE_CHECK_COMPLETE` لملف `Binaries/Android/LastFrontier-Android-Shipping-arm64.so`.
+- الفحص استخدم `readelf -W -l` وتحقق أن محاذاة كل مقطع `LOAD` في **هذه المكتبة فقط** لا تقل عن 16384 بايت. لا يمثل فحص المكتبات الأصلية الأخرى داخل AAB، أو محاذاة ZIP للحزمة، ولا يثبت تثبيت اللعبة على جهاز ذي صفحات 16KB.
+- صورة سابقة نحو 04:00 من الجلسة نفسها تؤكد `M117_FREE_GIB=129.1` و`M117_DISK=PASS` و`M117_GRADLE=CLEAN` و`M117_UAT=READY` و`M117_PREFLIGHT_COMPLETE`، وهذه بوابات موارد وأدوات فقط.
+- صورة Play Console نحو 03:54 تُظهر جميع الإصدارات المسجلة 212 و214 و215 و216 و217، و218 غير موجود ضمن الخمسة في تلك اللحظة؛ يجب إعادة تأكيد الرقم إذا حدث نشر أو رفع لاحق.
+- **المانع التالي الوحيد المثبت في M106**: `KeyStorePassword` غير موجود في `Config/DefaultEngine.ini` رغم نجاح مصادقة JKS في M116. العمل المقترح: إعداد Signing مؤقت ومحدود الصلاحيات في M106، إجراء إنتاج Gradle `bundleRelease` جديد، ثم التحقق من AndroidManifest والتوقيع وbundletool وجميع ملفات ELF/ZIP 16KB قبل الرفع.
+- لا تشارك كلمة المرور في GitHub أو المحادثة أو السجلات، فهي ظهرت سابقًا في الدردشة ويجب مراجعة مخاطر انكشافها.
+- مراجع Google الرسمية: https://developer.android.com/guide/practices/page-sizes ، https://developer.android.com/tools/bundletool
