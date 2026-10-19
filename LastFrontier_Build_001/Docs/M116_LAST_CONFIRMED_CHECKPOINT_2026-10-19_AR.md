@@ -77,3 +77,8 @@
 - This does not contradict confirmed `M116_KEY_SHA256=PASS`, `M116_KEY_PERMISSIONS=PASS`, `M116_CONFIG_OWNER=PASS`, `M116_CONFIG_PRIVACY=PASS`, `M116_SIGNING_LAYOUT=PASS`, or the M114 independent signing success. None of those prove remote Java's environment/passphrase intake.
 - Hold UAT and any release signing configuration until diagnostics. Avoid repeated password guesses. The immediate next **read-only, credential-free** check should verify `command -v keytool`, `java -version`, `keytool -list --help` availability, and `[ -t 0 ]` interactive stdin without printing any secret. If these work, plan a controlled, single follow-up invocation that retains sanitized error **category only** and never leaks entered secrets.
 - Preserve M106 sandbox, source backups, key, GitHub branches, and previous AAB. No release build/upload was started from this screenshot.
+
+## M116 clarification — original user did not enter password
+- User explicitly clarified after the screenshot that **no password was entered** during the earlier M116 terminal interaction. This accounts for the observed `M116_STORE_PASSWORD=FAIL`: the failure is an uncompleted/empty-password verification, **not evidence of wrong credentials** or JKS corruption.
+- Earlier M114 offline/private-key-signing PASS, JKS hash PASS, and permissions PASS remain valid.
+- Do not retry with arbitrary guesses. Next: on the original trusted VM, start `keytool -list -storetype JKS -keystore "$K" -alias crownfall-upload` with a real interactive password prompt, enter the existing original password on that terminal **only** (not in chat or saved script). Check result before any release build. No version 218 release bundle has been shown.
