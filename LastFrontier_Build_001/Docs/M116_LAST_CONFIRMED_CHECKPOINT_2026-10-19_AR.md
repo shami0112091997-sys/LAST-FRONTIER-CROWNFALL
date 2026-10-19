@@ -56,3 +56,11 @@
 - نطاق النتيجة: تطابق ملف JKS والموافقة على معيار الصلاحيات المختصر؛ **ليس** دليل صحة إعداد KeyStorePassword في Unreal، ولا بناء AAB Release جديد، ولا قبول Play.
 - آخر عائق معروف: `M116_KeyStorePassword=NOT_SET` في `Config/DefaultEngine.ini` الخاص بالـM106 sandbox، بينما `KeyStore=SET` و`KeyAlias=SET`. لا تُدخل كلمة مرور في محادثة أو GitHub أو أمر ظاهر.
 - الخطوة التالية: فحص مالك وصلاحيات `DefaultEngine.ini` دون طباعة محتوى الملف أو أي سر؛ ثم اعتماد أسلوب مؤقت وآمن لتزويد إعداد Distribution Signing بالاعتماد الصحيح في sandbox وحده، والتحقق من versionCode في Play قبل بناء Release واحد. أبقِ `main` و`m66` ومجلدات M63/M84 كما هي.
+
+## VM checkpoint M116 — Android configuration file protection (user screenshot ~03:09 Qatar, 19 October 2026)
+- Shell session confirmed on `crownfall-m62-build` in isolated `$HOME/crownfall/M106_RELEASE_SANDBOX_v218`.
+- The owner reported `M116_CONFIG_OWNER=PASS`, `M116_CONFIG_PRIVACY=PASS`, `M116_CONFIG_AUDIT_COMPLETE` from a read-only test of `Config/DefaultEngine.ini`. This test checks ownership and that group/other permission bits are zero (does not reveal passwords).
+- Previous checkpoints: `M116_KEY_SHA256=PASS`, `M116_KEY_PERMISSIONS=PASS`; configuration fields `KeyStore=SET`, `KeyAlias=SET`, `KeyStorePassword=NOT_SET`.
+- Security interpretation: no reason to recreate JKS. Do not write or publish signing password to GitHub, shell history, or chat; do not yet claim M116 full gate, bundleRelease, signed AAB, or Play upload.
+- Next logical phase: inspect the **structure only** of the AndroidRuntimeSettings INI section and duplicate signing field counts, without printing values; then privately verify original credentials and apply release-only signing configuration to isolated M106 with secure rollback. Never alter M63 or M84.
+- Epic Android settings documentation: https://dev.epicgames.com/documentation/en-us/unreal-engine/android-settings-in-the-unreal-engine-project-settings
