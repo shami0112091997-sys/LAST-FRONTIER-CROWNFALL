@@ -36,12 +36,17 @@ def triage(text):
     if not package_lines and not pids:
         return "NO_PACKAGE_EVIDENCE", {key:0 for key in COMPILED}, 0
     # Keep nearby stack/cause context, or lines tagged with a known package PID.
-    relevant = set()
+    near_package = set()
     for i in package_lines:
-        relevant.update(range(max(0,i-2),min(len(lines),i+35)))
+        near_package.update(range(max(0,i-2),min(len(lines),i+35)))
+    relevant = set()
     for i,line in enumerate(lines):
         m=LOGCAT_PID.match(line)
-        if m and m.group(1) in pids:
+        if m:
+            if (m.group(1) in pids) or (not pids and i in near_package):
+                relevant.add(i)
+        elif i in near_package:
+            # Java stack continuations may lack logcat PID prefixes.
             relevant.add(i)
     selected = [lines[i] for i in sorted(relevant)]
     result = {key:sum(bool(rx.search(line)) for line in selected)
