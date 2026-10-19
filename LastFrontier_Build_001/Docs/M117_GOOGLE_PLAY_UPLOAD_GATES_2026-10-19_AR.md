@@ -120,3 +120,10 @@
 - These checks verify successful transfer and byte count, **not content byte-for-byte identity**; compare SHA-256 of the copied AAB and VM source before download/upload.
 - Once SHA-256 matches, use private `cloudshell download` to download the copy to owner's authenticated Android device and upload only to Google Play **Internal testing**. Preserve VM source, Cloud Shell copy, and all signing backups. Do not use public storage or trigger additional Build.
 - Previous M118 results remain: signed/upload cert PASS, bundletool validate PASS, package com.crownfall.stronghold, versionCode 218, targetSdkVersion 36, non-debug/non-test-only PASS, 16KB bundle alignment and all 4 ARM64 ELF libs PASS. Play Console will still independently validate upload and app policy requirements.
+
+## M120 private Cloud Shell transfer SHA256 PASS — 05:48 Qatar
+- Owner screenshot after complete private `gcloud compute scp` shows `M120_SHA256=PASS` from Google Cloud Shell: computed SHA-256 on `$HOME/CROWNFALL_218_Release_Signed.aab` and compared against `sha256sum` executed by `gcloud compute ssh` on original `crownfall-m62-build` at `$HOME/crownfall/M106_RELEASE_SANDBOX_v218/Binaries/Android/LastFrontier-Android-Shipping.aab`.
+- Thus uploaded-to-Cloud-Shell candidate AAB **matches the original release AAB byte-for-byte**, on top of verified 117411826-byte length; no second build is needed.
+- Next step: use official `cloudshell download "$HOME/CROWNFALL_218_Release_Signed.aab"` from Cloud Shell (not remote VM) to private owner's Android downloads, confirm the file is complete; in Google Play Console choose CROWNFALL → Internal testing → Create new release, select exact signed versionCode 218 AAB, review policy warnings and draft before releasing to invited testers. Do not upload publicly or change production.
+- This is a complete *transport* gate, not Google Play acceptance; Play upload has **not** occurred in evidence received at this checkpoint.
+- Official docs: https://docs.cloud.google.com/shell/docs/using-cloudshell-command ; https://support.google.com/googleplay/android-developer/answer/9859348 .
