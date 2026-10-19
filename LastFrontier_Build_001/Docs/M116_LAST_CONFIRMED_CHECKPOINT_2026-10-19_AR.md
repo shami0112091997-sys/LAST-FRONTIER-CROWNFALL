@@ -82,3 +82,11 @@
 - User explicitly clarified after the screenshot that **no password was entered** during the earlier M116 terminal interaction. This accounts for the observed `M116_STORE_PASSWORD=FAIL`: the failure is an uncompleted/empty-password verification, **not evidence of wrong credentials** or JKS corruption.
 - Earlier M114 offline/private-key-signing PASS, JKS hash PASS, and permissions PASS remain valid.
 - Do not retry with arbitrary guesses. Next: on the original trusted VM, start `keytool -list -storetype JKS -keystore "$K" -alias crownfall-upload` with a real interactive password prompt, enter the existing original password on that terminal **only** (not in chat or saved script). Check result before any release build. No version 218 release bundle has been shown.
+
+## M116 original JKS password validated — VM screenshot ~03:29 Qatar
+- User provided new Cloud Shell screenshot on `crownfall-m62-build`, showing a **second** test with actual password entry: `M116_STORE_PASSWORD=PASS` and `M116_PASSWORD_CLEARED`.
+- Test ran Java `keytool -list -storetype JKS -keystore "$K" -alias crownfall-upload -storepass:env M116_STORE_PASS` with stdout/stderr suppressed. This verifies keystore access and alias under supplied credentials, **not** yet Unreal Distribution Signing, key-specific password usage, or signed release AAB.
+- The previous `FAIL` was explained by user not entering any password, not an authentication failure.
+- Existing checkpoints: JKS SHA-256 PASS, JKS permissions PASS, DefaultEngine.ini owner/privacy PASS, Android signing layout PASS; `KeyStorePassword` absent in INI. No build has started.
+- Important: password was disclosed in chat earlier. Never replicate it in this repo, in command arguments, logs, screenshots, or documentation. Consider future credential rotation through Google Play upload-key reset only after evaluating impact; not required to proceed with this audit.
+- Next: inspect Distribution/Shipping, package ID, store version, bundle flags, original/cooked TestMap and binary in M106 without printing secrets. Then plan secure temporary signing configuration with rollback before any build.
