@@ -113,3 +113,10 @@
 - Next: privately copy **exact existing signed AAB** from VM into Google Cloud Shell (via `gcloud compute scp`), validate copied byte count and SHA-256 against source, then download locally over authenticated Cloud Shell and upload to **Play Console Internal Testing only**, review warnings and resolve app content/declarations if requested. Do NOT publicly share binary or credentials.
 - Passing these technical checks does not guarantee Play Console will accept the upload or confirm runtime compatibility. Device testing and Play review remain open.
 - Official transfer docs: https://docs.cloud.google.com/sdk/gcloud/reference/compute/scp ; https://docs.cloud.google.com/shell/docs/using-cloudshell-command
+
+## M120 signed AAB transfer to Cloud Shell — 05:46 Qatar
+- New owner screenshot shows Google Cloud Shell transfer from original VM `crownfall-m62-build` over `gcloud compute scp` to private Cloud Shell path `$HOME/CROWNFALL_218_Release_Signed.aab`, via Google Cloud project `project-f1aa4101-551b-4dbe-981`, zone `us-central1-a`.
+- Transfer progress reached `100%`, and shell explicitly reported `M120_TRANSFER=PASS` and `M120_SIZE=PASS`; source M119 signed AAB expected exact size `117411826` bytes.
+- These checks verify successful transfer and byte count, **not content byte-for-byte identity**; compare SHA-256 of the copied AAB and VM source before download/upload.
+- Once SHA-256 matches, use private `cloudshell download` to download the copy to owner's authenticated Android device and upload only to Google Play **Internal testing**. Preserve VM source, Cloud Shell copy, and all signing backups. Do not use public storage or trigger additional Build.
+- Previous M118 results remain: signed/upload cert PASS, bundletool validate PASS, package com.crownfall.stronghold, versionCode 218, targetSdkVersion 36, non-debug/non-test-only PASS, 16KB bundle alignment and all 4 ARM64 ELF libs PASS. Play Console will still independently validate upload and app policy requirements.
