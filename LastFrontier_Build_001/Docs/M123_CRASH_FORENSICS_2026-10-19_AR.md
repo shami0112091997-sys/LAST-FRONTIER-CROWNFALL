@@ -60,3 +60,10 @@ adb logcat -b crash -d -v threadtime
 6. Android application exit reasons: https://developer.android.com/about/versions/11/features
 
 **نقطة الاستئناف:** اطلب صورة Android vitals لقسم Crashes and ANRs أو نتيجة فحص M122 على VM. **لا يمكن الجزم بالسبب دون سجل الجهاز**.
+
+## M123 متابعة تقرير Google Play — 19 أكتوبر مساءً
+- طلب المستخدم مواصلة التشخيص دون انتظار. مراجعة إمكانات الاتصال وجدت اتصال GitHub فقط، ولا توجد وسيلة متاحة ضمن هذه الجلسة لقراءة تقارير Android Vitals أو Pre-launch Report الخاصة بحساب Play Console. **لا تدّع أن البيانات فُحصت**.
+- حسب تعليمات Google المحدثة، الخطوة الأولى الأنسب لمختبر واحد هي `Test and release → Testing → Pre-launch report → Details → Stability`. إذا توفر `View details` لفشل الإطلاق افتحه واستخرج exception/stack trace، مع حذف معلومات الجهاز والحساب الخاصة قبل مشاركة مقتطف.
+- إذا لم يظهر تقرير (قد يعتمد إنشاؤه على سعة أجهزة Google)، انتقل إلى `Monitor and improve → Android vitals → Crashes and ANRs`، وفلتر الإصدار 218/المقدمة، ثم `View details`. Vitals تعتمد على مستخدمي الأجهزة الذين وافقوا على إرسال بيانات التشخيص وقد لا تُظهر عطل مستخدم واحد.
+- **ممنوع إعادة إنتاج العطل مرارًا بحجة ظهور البيانات**، وممنوع تعديل المشروع أو نشر الإصدار 219 قبل ظهور فئة تعطل موثقة. لا ترفع ملف bugreport أو logcat كاملاً إلى GitHub أو المحادثة؛ شارك رسالة الخطأ الأولى فقط بعد إخفاء المعرفات.
+- المراجع: https://support.google.com/googleplay/android-developer/answer/9842757 ; https://support.google.com/googleplay/android-developer/answer/9844487 ; https://support.google.com/googleplay/android-developer/answer/9859174 .
