@@ -90,3 +90,10 @@
 - Existing checkpoints: JKS SHA-256 PASS, JKS permissions PASS, DefaultEngine.ini owner/privacy PASS, Android signing layout PASS; `KeyStorePassword` absent in INI. No build has started.
 - Important: password was disclosed in chat earlier. Never replicate it in this repo, in command arguments, logs, screenshots, or documentation. Consider future credential rotation through Google Play upload-key reset only after evaluating impact; not required to proceed with this audit.
 - Next: inspect Distribution/Shipping, package ID, store version, bundle flags, original/cooked TestMap and binary in M106 without printing secrets. Then plan secure temporary signing configuration with rollback before any build.
+
+## M116 VM release-readiness presence checks — screenshot ~03:31 Qatar
+- Latest owner-provided Cloud Shell screenshot from original `crownfall-m62-build` confirms four `M116_FILE=PASS` outputs for M106 sandbox `LastFrontier.uproject`, original `Content/Maps/TestMap.umap`, cooked `Saved/Cooked/Android_ASTC/LastFrontier/Content/Maps/TestMap.umap`, and `Binaries/Android/LastFrontier-Android-Shipping-arm64.so`.
+- Confirms two `M116_DISTRIBUTION=PASS` outputs for `ForDistribution=True` and `BuildConfiguration=PPBC_Shipping` in `Config/DefaultGame.ini`.
+- Confirms two `M116_ANDROID=PASS` outputs for `StoreVersion=218` and `bEnableBundle=True` in `Config/DefaultEngine.ini`, followed by `M116_READINESS_COMPLETE`.
+- All **8/8 narrow existence/sub-string checks** passed. Prior screenshot shows `M116_STORE_PASSWORD=PASS` for original JKS and alias. This does not yet prove correct full Android section settings, bundleRelease packaging, APK/AAB signing, or Play eligibility.
+- Remaining: `KeyStorePassword` is not yet configured in M106. Do not paste it into chat, GitHub, command arguments, or public shell history. Plan ephemeral signing credentials only in isolated M106 with secure backups, verify no leaking logs, then run one controlled Release build only when specifically authorized and ready. Preserve M63/M84 source and original JKS.
