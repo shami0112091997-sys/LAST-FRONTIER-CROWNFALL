@@ -71,3 +71,10 @@
 - **المانع التالي الوحيد المثبت في M106**: `KeyStorePassword` غير موجود في `Config/DefaultEngine.ini` رغم نجاح مصادقة JKS في M116. العمل المقترح: إعداد Signing مؤقت ومحدود الصلاحيات في M106، إجراء إنتاج Gradle `bundleRelease` جديد، ثم التحقق من AndroidManifest والتوقيع وbundletool وجميع ملفات ELF/ZIP 16KB قبل الرفع.
 - لا تشارك كلمة المرور في GitHub أو المحادثة أو السجلات، فهي ظهرت سابقًا في الدردشة ويجب مراجعة مخاطر انكشافها.
 - مراجع Google الرسمية: https://developer.android.com/guide/practices/page-sizes ، https://developer.android.com/tools/bundletool
+
+## M119 actual VM preflight — screenshot at 04:46 Qatar
+- Cloud Shell upload produced a filename with suffix `-1.py`; user found it with `find`, verified SHA256, and privately copied it by `gcloud compute scp` to `$HOME/M119_Secure_Release_218_STAGE_20261019.py` on original `crownfall-m62-build`.
+- On original VM, screenshot shows `M119_VM_FILE=PASS`, `M119_PYTHON_SYNTAX=PASS`, `M119_PREFLIGHT=PASS`, `M119_CONFIG_RESTORATION_SOURCE=M118_BACKUP_VERIFIED`, `M119_MODE=READ_ONLY`, `M119_BUILD_STARTED=NO`.
+- This confirms **M119's own preflight passed on the VM** and M118 backup matches the current private config; no true Gradle bundleRelease, UAT run, AAB build or upload has yet occurred.
+- M119 --build temporarily places the JKS store password in **isolated VM M106** Config/DefaultEngine.ini while UAT runs; normal exit/most signals restore the M118 backup. This is not robust to SIGKILL/power loss. Mobile Cloud Shell disconnects have been observed, so use a persistent tmux session if available, verify rollback after build, and treat private Intermediate/Android and logs as sensitive before sharing any artifacts.
+- Next safe step: credential-free check for `tmux` on VM and review guarded build procedure before pressing ahead.
