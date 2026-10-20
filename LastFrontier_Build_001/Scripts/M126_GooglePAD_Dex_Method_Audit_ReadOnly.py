@@ -56,8 +56,8 @@ def bounded_range(b: bytes, start: int, count: int, stride: int) -> None:
         raise DexProblem('INVALID_TABLE_RANGE')
 
 
-def dex_method_entries(b: bytes, interesting: set[str]) -> tuple[set[str],set[str],set[str]]:
-    """Return (method_id names, class_data names, GameActivity-defined names).
+def dex_method_entries(b: bytes, interesting: set[str]) -> tuple[set[str],set[str],set[str],set[str]]:
+    """Return method_id names, defined names, activity names, and Available()Z matches.
     Counts only class_data direct/virtual methods as defined; merely present
     string_ids or method_id is NOT treated as a defined method.
     """
@@ -67,16 +67,18 @@ def dex_method_entries(b: bytes, interesting: set[str]) -> tuple[set[str],set[st
         raise DexProblem('INVALID_DEX_HEADER')
     string_n, string_at = le32(b, 0x38), le32(b, 0x3C)
     type_n, type_at = le32(b, 0x40), le32(b, 0x44)
+    proto_n, proto_at = le32(b, 0x48), le32(b, 0x4C)
     method_n, method_at = le32(b, 0x58), le32(b, 0x5C)
     class_n, class_at = le32(b, 0x60), le32(b, 0x64)
     if string_n > MAX_STRINGS or method_n > MAX_METHOD_IDS or class_n > MAX_CLASS_DEFS:
         raise DexProblem('EXCESSIVE_DEX_COUNTS')
-    for st,n,stride in [(string_at,string_n,4),(type_at,type_n,4),(method_at,method_n,8),(class_at,class_n,32)]:
+    for st,n,stride in [(string_at,string_n,4),(type_at,type_n,4),(proto_at,proto_n,12),(method_at,method_n,8),(class_at,class_n,32)]:
         bounded_range(b,st,n,stride)
 
     target_names = set(interesting)
     strings = {}
     activity_type_ids=set()
+    bool_type_ids=set()
     for type_idx in range(type_n):
         text_idx=le32(b,type_at+4*type_idx)
         if text_idx>=string_n:raise DexProblem('INVALID_TYPE_STRING_INDEX')
@@ -87,6 +89,7 @@ def dex_method_entries(b: bytes, interesting: set[str]) -> tuple[set[str],set[st
             descriptor=b[start:stop]
             if descriptor.endswith(b'/GameActivity;') or descriptor.endswith(b'/GameApplication;'):
                 activity_type_ids.add(type_idx)
+            if descriptor==b'Z': bool_type_ids.add(type_idx)
     for i in range(string_n):
         at = le32(b, string_at+i*4)
         _, at = uleb(b, at)
@@ -103,12 +106,17 @@ def dex_method_entries(b: bytes, interesting: set[str]) -> tuple[set[str],set[st
     candidates={}
     for idx in range(method_n):
         at=method_at+idx*8
-        class_idx,_,name_idx=struct.unpack_from('<HHI',b,at)
+        class_idx,proto_idx,name_idx=struct.unpack_from('<HHI',b,at)
         if name_idx in strings and class_idx < type_n:
-            candidates[idx]=(class_idx,strings[name_idx])
-    seen_ids={name for _,name in candidates.values()}
+            if proto_idx>=proto_n: raise DexProblem('INVALID_PROTO_INDEX')
+            proto_pos=proto_at+12*proto_idx
+            ret_type=le32(b,proto_pos+4)
+            parameter_off=le32(b,proto_pos+8)
+            available_sig=(ret_type in bool_type_ids and parameter_off==0)
+            candidates[idx]=(class_idx,strings[name_idx],available_sig)
+    seen_ids={name for _,name,_ in candidates.values()}
     if not candidates:
-        return seen_ids,set(),set()
+        return seen_ids,set(),set(),set()
 
     # Check class index and code declaration, do not accept method_ids alone.
     class_to_data={}
@@ -124,6 +132,7 @@ def dex_method_entries(b: bytes, interesting: set[str]) -> tuple[set[str],set[st
 
     defined=set()
     activity_defined=set()
+    available_bool_defined=set()
     for class_idx, pos in class_to_data.items():
         static_n,pos=uleb(b,pos);inst_n,pos=uleb(b,pos)
         direct_n,pos=uleb(b,pos);virtual_n,pos=uleb(b,pos)
@@ -142,8 +151,11 @@ def dex_method_entries(b: bytes, interesting: set[str]) -> tuple[set[str],set[st
                 match=candidates.get(index)
                 if match and match[0]==class_idx:
                     defined.add(match[1])
-                    if class_idx in activity_type_ids: activity_defined.add(match[1])
-    return seen_ids,defined,activity_defined
+                    if class_idx in activity_type_ids:
+                        activity_defined.add(match[1])
+                        if match[1]=='AndroidThunkJava_GooglePAD_Available' and match[2]:
+                            available_bool_defined.add(match[1])
+    return seen_ids,defined,activity_defined,available_bool_defined
 
 
 def native_methods(blob: bytes) -> set[str]:
@@ -159,7 +171,7 @@ def audit(aab: Path) -> tuple[int,dict[str,str|int]]:
         size=aab.stat().st_size
         if not (1<=size<=MAX_BUNDLE_BYTES):
             info['M126_INPUT']='INVALID_SIZE';return 2,info
-        native=set(); method_ids=set();defined=set();activity_defs=set();dex_count=0;so_count=0;total=0
+        native=set(); method_ids=set();defined=set();activity_defs=set();available_bool=set();dex_count=0;so_count=0;total=0
         with zipfile.ZipFile(aab) as z:
             for ent in z.infolist():
                 name=ent.filename
@@ -181,9 +193,9 @@ def audit(aab: Path) -> tuple[int,dict[str,str|int]]:
                     dex_count+=1
                     # Native methods can appear in later SO entries; collect DEX
                     # and parse all GooglePAD method definitions independent of SO order.
-                    ids,defs,act_defs=dex_method_entries(data,{
+                    ids,defs,act_defs,bool_defs=dex_method_entries(data,{
                         x.decode('ascii') for x in NAME_RX.findall(data)})
-                    method_ids.update(ids);defined.update(defs);activity_defs.update(act_defs)
+                    method_ids.update(ids);defined.update(defs);activity_defs.update(act_defs);available_bool.update(bool_defs)
         missing=native-defined
         only_string=native-method_ids
         info.update({
@@ -194,6 +206,7 @@ def audit(aab: Path) -> tuple[int,dict[str,str|int]]:
           'M126_DEX_MATCHED_CLASS_METHOD_DEFINITIONS':len(native&defined),
           'M126_MISSING_CLASS_METHOD_DEFINITIONS':len(missing),
           'M126_DEX_GAME_ACTIVITY_METHOD_DEFINITIONS':len(native&activity_defs),
+          'M126_DEX_AVAILABLE_NOARGS_BOOL_DEFINITION': 'YES' if 'AndroidThunkJava_GooglePAD_Available' in available_bool else 'NO_OR_NOT_APPLICABLE',
           'M126_ONLY_NATIVE_NO_DEX_METHOD_ID':len(only_string),
         })
         if not dex_count or not so_count:
