@@ -86,16 +86,16 @@ with tempfile.TemporaryDirectory() as tmp:
 # M127 regression: same name defined in unrelated Java class is insufficient.
 with tempfile.TemporaryDirectory() as tmp:
     p=Path(tmp)/'unrelated-class.aab'
-    bundle(p,dex(class_name='Lcom/example/OtherClass;'),METHOD.encode()+b'\\0')
+    bundle(p,dex(class_name='Lcom/example/OtherClass;'),METHOD.encode()+b'\0')
     status,out=m.audit(p)
     assert status==3 and out['M126_ASSESSMENT']=='REVIEW_METHOD_NOT_DEFINED_IN_EXPECTED_ACTIVITY'
     assert out['M127_NATIVE_PAD_NAMES_NOT_IN_GAME_ACTIVITY']==1
     checks+=1
-    bundle(p,dex(bool_return=False),METHOD.encode()+b'\\0')
+    bundle(p,dex(bool_return=False),METHOD.encode()+b'\0')
     status,out=m.audit(p)
     assert status==3 and out['M126_ASSESSMENT']=='REVIEW_AVAILABLE_JNI_SIGNATURE_MISMATCH'
     checks+=1
-    bundle(p,dex(),METHOD.encode()+b'\\0')
+    bundle(p,dex(),METHOD.encode()+b'\0')
     status,out=m.audit(p)
     assert status==0 and out['M127_NATIVE_PAD_NAMES_NOT_IN_GAME_ACTIVITY']==0
     checks+=1
