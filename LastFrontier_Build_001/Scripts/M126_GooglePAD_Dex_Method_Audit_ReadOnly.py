@@ -215,7 +215,21 @@ def audit(aab: Path) -> tuple[int,dict[str,str|int]]:
             info['M126_ASSESSMENT']='NO_NATIVE_GOOGLEPAD_JNI_NAMES_FOUND';return 0,info
         if missing:
             info['M126_ASSESSMENT']='REVIEW_POTENTIAL_JNI_METHOD_MISMATCH';return 3,info
-        info['M126_ASSESSMENT']='STATIC_METHOD_DEFINITIONS_PRESENT_SIGNATURE_UNVERIFIED'
+        # Android JNI FindMethod resolves on a specific Java class (and its
+        # superclasses). Merely finding the same name defined by *any* DEX
+        # class is insufficient. An inherited method can still be valid, so
+        # this is a REVIEW signal rather than an assertion of breakage.
+        wrong_owner = native - activity_defs
+        info['M126_NATIVE_METHODS_NOT_DEFINED_ON_ACTIVITY']='{}'.format(len(wrong_owner))
+        if wrong_owner:
+            info['M126_ASSESSMENT']='REVIEW_METHOD_OWNER_OR_INHERITANCE';return 3,info
+        # The historical GooglePAD JNI failure references Available()Z;
+        # one DEX method with the right name but wrong signature was previously
+        # accepted as good. Detect the concrete no-arg boolean case.
+        if ('AndroidThunkJava_GooglePAD_Available' in native
+                and 'AndroidThunkJava_GooglePAD_Available' not in available_bool):
+            info['M126_ASSESSMENT']='REVIEW_AVAILABLE_JNI_SIGNATURE';return 3,info
+        info['M126_ASSESSMENT']='STATIC_ACTIVITY_METHODS_FOUND_OTHER_SIGNATURES_UNVERIFIED'
         return 0,info
     except DexProblem:
         info['M126_INPUT']='DEX_PARSE_FAILED';return 2,info
