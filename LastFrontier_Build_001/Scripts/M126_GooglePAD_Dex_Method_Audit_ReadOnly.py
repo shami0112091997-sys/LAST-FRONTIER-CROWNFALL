@@ -4,8 +4,9 @@ with DEX **class_data method entries**, not mere ASCII string occurrences.
 
 Read-only, bounded ZIP/DEX parser. Never opens private keystores, logs or source
 files; prints only fixed statuses, counts and sanitized nonsecret API method names.
-A match does NOT prove the method has the expected JNI signature or that it can
-be called at runtime. A mismatch is a forensic lead, not a crash diagnosis.
+Checks that static definitions are in GameActivity/GameApplication and checks
+Available()Z when native text references it. Other signatures and inheritance
+are not resolved. A mismatch is a forensic lead, not a crash diagnosis.
 """
 from __future__ import annotations
 import argparse
@@ -198,6 +199,9 @@ def audit(aab: Path) -> tuple[int,dict[str,str|int]]:
                     method_ids.update(ids);defined.update(defs);activity_defs.update(act_defs);available_bool.update(bool_defs)
         missing=native-defined
         only_string=native-method_ids
+        not_activity=native-activity_defs
+        available_required = 'AndroidThunkJava_GooglePAD_Available' in native
+        available_signature_ok = 'AndroidThunkJava_GooglePAD_Available' in available_bool
         info.update({
           'M126_DEX_FILES':dex_count,
           'M126_ARM64_LIBS':so_count,
@@ -208,6 +212,9 @@ def audit(aab: Path) -> tuple[int,dict[str,str|int]]:
           'M126_DEX_GAME_ACTIVITY_METHOD_DEFINITIONS':len(native&activity_defs),
           'M126_DEX_AVAILABLE_NOARGS_BOOL_DEFINITION': 'YES' if 'AndroidThunkJava_GooglePAD_Available' in available_bool else 'NO_OR_NOT_APPLICABLE',
           'M126_ONLY_NATIVE_NO_DEX_METHOD_ID':len(only_string),
+          'M127_NATIVE_PAD_NAMES_NOT_IN_GAME_ACTIVITY':len(not_activity),
+          'M127_AVAILABLE_REQUIRED_BY_NATIVE':'YES' if available_required else 'NO',
+          'M127_AVAILABLE_GAME_ACTIVITY_BOOL_SIGNATURE':'MATCH' if available_signature_ok else 'UNMATCHED_OR_UNNEEDED',
         })
         if not dex_count or not so_count:
             info['M126_ASSESSMENT']='INCOMPLETE_CODE_ASSETS';return 3,info
@@ -215,7 +222,17 @@ def audit(aab: Path) -> tuple[int,dict[str,str|int]]:
             info['M126_ASSESSMENT']='NO_NATIVE_GOOGLEPAD_JNI_NAMES_FOUND';return 0,info
         if missing:
             info['M126_ASSESSMENT']='REVIEW_POTENTIAL_JNI_METHOD_MISMATCH';return 3,info
-        info['M126_ASSESSMENT']='STATIC_METHOD_DEFINITIONS_PRESENT_SIGNATURE_UNVERIFIED'
+        # A definition in an unrelated DEX class is NOT evidence that Unreal's
+        # Java bridge can call it on its GameActivity/GameApplication instance.
+        # A custom activity can use a different name: flag for review rather
+        # than falsely claim the actual runtime will fail.
+        if not_activity:
+            info['M126_ASSESSMENT']='REVIEW_METHOD_NOT_DEFINED_IN_EXPECTED_ACTIVITY';return 3,info
+        # Unlike a textual match, this exact method has a documented no-args
+        # boolean JNI signature. A non-matching overload is not sufficient.
+        if available_required and not available_signature_ok:
+            info['M126_ASSESSMENT']='REVIEW_AVAILABLE_JNI_SIGNATURE_MISMATCH';return 3,info
+        info['M126_ASSESSMENT']='STATIC_ACTIVITY_DEFINITIONS_PRESENT_OTHER_SIGNATURES_UNVERIFIED'
         return 0,info
     except DexProblem:
         info['M126_INPUT']='DEX_PARSE_FAILED';return 2,info
