@@ -10,5 +10,11 @@
       "LoadingPhase": "Default"
     }
   ],
-  "DisableEnginePluginsByDefault": true
+  "DisableEnginePluginsByDefault": true,
+  "Plugins": [
+    {
+      "Name": "GooglePAD",
+      "Enabled": true
+    }
+  ]
 }
