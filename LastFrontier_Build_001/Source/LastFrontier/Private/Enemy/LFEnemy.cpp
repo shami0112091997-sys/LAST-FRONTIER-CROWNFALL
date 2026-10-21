@@ -13,6 +13,10 @@ ALFEnemy::ALFEnemy()
 
     GetCapsuleComponent()->InitCapsuleSize(44.0f, 92.0f);
     GetCharacterMovement()->MaxWalkSpeed = ChaseSpeed;
+    // The six first-playable enemies are spawned without an AIController.
+    // Unreal normally stops CharacterMovement physics when Controller is null.
+    // Keep the simple AddMovementInput chase active without changing AI setup.
+    GetCharacterMovement()->bRunPhysicsWithNoController = true;
     GetCharacterMovement()->bOrientRotationToMovement = true;
     bUseControllerRotationYaw = false;
 
