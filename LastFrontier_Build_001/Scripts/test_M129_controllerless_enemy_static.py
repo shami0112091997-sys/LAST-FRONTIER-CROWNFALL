@@ -20,7 +20,7 @@ checks = [
     ('enemy constructor still orients to chase direction',
      'bOrientRotationToMovement = true;' in enemy),
     ('enemy spawn is controllerless in current level director',
-     bool(re.search(r'SpawnActor<ALFEnemy>\\s*\\(', world))),
+     'SpawnActor<ALFEnemy>(' in world),
     ('no experimental GooglePAD change bundled into gameplay branch',
      '"Plugins":' not in project_descriptor),
 ]
