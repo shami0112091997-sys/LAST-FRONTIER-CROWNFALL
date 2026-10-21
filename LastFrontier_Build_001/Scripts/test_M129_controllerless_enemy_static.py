@@ -4,7 +4,6 @@
 Read files within this repository only; do not mutate the project.
 """
 from pathlib import Path
-import re
 
 project = Path(__file__).resolve().parents[1]
 enemy = (project / 'Source/LastFrontier/Private/Enemy/LFEnemy.cpp').read_text()
