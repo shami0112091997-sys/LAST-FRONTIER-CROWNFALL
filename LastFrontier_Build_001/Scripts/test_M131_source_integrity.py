@@ -41,9 +41,10 @@ class RepoGateTests(unittest.TestCase):
                    "AIControllerClass = AAIController::StaticClass();\n"
                    "AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;\n")
         self.write("LastFrontier_Build_001/Source/LastFrontier/Private/UI/LFHUD.cpp",
-                   "LastEnemyCountRefreshSeconds\nNow - LastEnemyCountRefreshSeconds >= 0.25f")
+                   "LastEnemyCountRefreshSeconds\nNow - LastEnemyCountRefreshSeconds >= 0.25f\n"
+                   "bHasSeenEnemies && CachedEnemyCount == 0")
         self.write("LastFrontier_Build_001/Source/LastFrontier/Public/UI/LFHUD.h",
-                   "CachedEnemyCount")
+                   "CachedEnemyCount\nbHasSeenEnemies")
         self.write("LastFrontier_Build_001/Source/LastFrontier/Private/World/LFWorldDirector.cpp",
                    "#if PLATFORM_ANDROID\nSetTimerForNextTick\nBuildNextStage()")
         self.write("LastFrontier_Build_001/Scripts/M68_Staged_Android_Build.sh",
@@ -92,6 +93,12 @@ class RepoGateTests(unittest.TestCase):
         _, errors, _ = audit(self.repo)
         self.assertIn("PACKAGE_DATA_OUTSIDE_APK", errors)
 
+
+    def test_victory_cannot_appear_before_enemies_exist(self):
+        self.write("LastFrontier_Build_001/Source/LastFrontier/Private/UI/LFHUD.cpp",
+                   "LastEnemyCountRefreshSeconds\nNow - LastEnemyCountRefreshSeconds >= 0.25f")
+        _, errors, _ = audit(self.repo)
+        self.assertIn("HUD_NO_PREMATURE_VICTORY", errors)
 
 if __name__ == "__main__":
     unittest.main()
