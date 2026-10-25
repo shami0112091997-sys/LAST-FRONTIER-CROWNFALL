@@ -27,16 +27,17 @@ class M133ReadOnlyTests(TestCase):
         self.aab = self.tmp / "original_test.aab"
         self.build_aab()
 
-    def build_aab(self, *, with_arm64=True, with_obb=True, with_dex=True):
+    def build_aab(self, *, with_arm64=True, with_obb=True, with_dex=True, with_pack=True):
         with zipfile.ZipFile(self.aab, mode="w") as archive:
             archive.writestr("BundleConfig.pb", b"\x00")
             archive.writestr("base/manifest/AndroidManifest.xml", b"\x01")
-            archive.writestr("obbassets/manifest/AndroidManifest.xml", b"\x01")
+            if with_pack:
+                archive.writestr("obbassets/manifest/AndroidManifest.xml", b"\x01")
             if with_dex:
                 archive.writestr("base/dex/classes.dex", b"dex\n038\x00")
             if with_arm64:
                 archive.writestr("base/lib/arm64-v8a/libUnreal.so", b"\x7fELF")
-            if with_obb:
+            if with_obb and with_pack:
                 archive.writestr("obbassets/assets/main.obb.png", b"SIMULATED_TEST_DATA_NOT_A_REAL_OBB")
 
     def test_maps_distinct_and_aab_metadata_pass(self):
@@ -69,7 +70,8 @@ class M133ReadOnlyTests(TestCase):
                            + b"\0" + bad_content).hexdigest()
         with mock.patch.object(tool, "HISTORIC_BAD_GITHUB_MAP_GIT_OID", oid):
             facts, ok = tool.inspect_maps(self.maps)
-        self.assertTrue(ok)  # header is not a full semantic package validation
+        self.assertFalse(ok)  # genuine prior UE cook failure blocks green status
+        self.assertEqual(facts["MAP_PROVENANCE_STATUS"], "REVIEW_KNOWN_COOK_FAILED_BLOB")
         self.assertEqual(facts["M84_HISTORIC_BAD_GITHUB_BLOB"], "YES")
         self.assertEqual(facts["GITHUB_BAD_BLOB_MATCHED_BY_VM"], "YES")
 
@@ -98,6 +100,13 @@ class M133ReadOnlyTests(TestCase):
         aab, valid = tool.inspect_aab(self.aab)
         self.assertFalse(valid)
         self.assertEqual(aab["AAB_INSTALL_PACK_OBB_COUNT"], "0")
+
+    def test_missing_obassets_module_blocks_218_claim(self):
+        self.build_aab(with_pack=False)
+        report, valid = tool.inspect_aab(self.aab)
+        self.assertFalse(valid)
+        self.assertEqual(report["AAB_OBBASSETS_MODULE"], "NO")
+        self.assertEqual(report["AAB_STRUCTURE"], "REVIEW")
 
     def test_dex_required(self):
         self.build_aab(with_dex=False)
