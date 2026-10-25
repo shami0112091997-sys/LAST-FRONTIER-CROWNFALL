@@ -44,6 +44,7 @@ void ALFHUD::DrawHUD()
             TArray<AActor*> Enemies;
             UGameplayStatics::GetAllActorsOfClass(this, ALFEnemy::StaticClass(), Enemies);
             CachedEnemyCount = Enemies.Num();
+            bHasSeenEnemies |= (CachedEnemyCount > 0);
             LastEnemyCountRefreshSeconds = Now;
         }
     }
@@ -60,7 +61,7 @@ void ALFHUD::DrawHUD()
     DrawText(TEXT("Move: WASD / left stick   Look: mouse / right stick   Fire: LMB / trigger / tap right side"),
         FLinearColor(0.72f, 0.82f, 0.88f, 1.0f), 32.0f, Canvas->ClipY - 46.0f, Font, 0.9f, false);
 
-    if (CachedEnemyCount == 0)
+    if (bHasSeenEnemies && CachedEnemyCount == 0)
     {
         DrawText(TEXT("ROYAL DISTRICT SECURED"),
             FLinearColor(0.95f, 0.72f, 0.28f, 1.0f), CX - 145.0f, CY - 90.0f, Font, 1.6f, false);
