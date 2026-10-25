@@ -4,10 +4,13 @@
 Tests use ONLY tempfile fixtures, never the Play release, VM, or private keys.
 Run locally: python3 -m unittest discover -s LastFrontier_Build_001/Scripts -p 'test_M131_*.py' -v
 """
+import hashlib
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
+import M131_Unreal_Repo_Integrity_ReadOnly as integrity
 from M131_Unreal_Repo_Integrity_ReadOnly import audit
 
 
@@ -99,6 +102,18 @@ class RepoGateTests(unittest.TestCase):
                    "LastEnemyCountRefreshSeconds\nNow - LastEnemyCountRefreshSeconds >= 0.25f")
         _, errors, _ = audit(self.repo)
         self.assertIn("HUD_NO_PREMATURE_VICTORY", errors)
+
+    def test_historic_failed_map_is_flagged_despite_valid_header(self):
+        # Do not use the actual private map: a synthetic Git blob with valid
+        # Unreal magic is enough to exercise the historic failure warning.
+        data = bytes.fromhex("c1832a9e") + b"\0" * 60
+        oid = hashlib.sha1(b"blob " + str(len(data)).encode("ascii") + b"\0" + data).hexdigest()
+        with mock.patch.object(integrity, "HISTORIC_BAD_MAP_GIT_OID", oid):
+            checks, errors, reviews = audit(self.repo)
+        self.assertFalse(errors)
+        self.assertEqual(checks["UNREAL_MAP_HEADER_PRESENT"], "PASS")
+        self.assertEqual(checks["TESTMAP_HISTORIC_COOK_FAILURE"], "REVIEW")
+        self.assertIn("TESTMAP_HISTORIC_COOK_FAILURE", reviews)
 
 if __name__ == "__main__":
     unittest.main()
