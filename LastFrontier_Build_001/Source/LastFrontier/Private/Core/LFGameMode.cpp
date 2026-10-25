@@ -18,10 +18,16 @@ ALFGameMode::ALFGameMode()
 void ALFGameMode::BeginPlay()
 {
     Super::BeginPlay();
+    UE_LOG(LogTemp, Display, TEXT("CROWNFALL_BOOT_GAMEMODE_BEGINPLAY=M131"));
 
-    if (GetWorld())
+    if (UWorld* World = GetWorld())
     {
-        GetWorld()->SpawnActor<ALFWorldDirector>(ALFWorldDirector::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator);
+        ALFWorldDirector* Director = World->SpawnActor<ALFWorldDirector>(
+            ALFWorldDirector::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator);
+        if (!Director)
+        {
+            UE_LOG(LogTemp, Error, TEXT("CROWNFALL_WORLD_DIRECTOR_SPAWN_FAILED"));
+        }
     }
 
     EnsurePlayablePawn();
