@@ -84,16 +84,17 @@ def audit(repo: Path, play_version: int = 218) -> tuple[dict[str, str], list[str
         status("ANDROID_AAB", (unique_ini_value(engine, ANDROID_SECTION, "bEnableBundle") or "").lower() == "true")
         version = unique_ini_value(engine, ANDROID_SECTION, "StoreVersion")
         status("SOURCE_VERSION_NUMERIC", bool(version and version.isdecimal()))
-        status("SOURCE_VERSION_DIFFERS_FROM_PLAY",
-               bool(version and version.isdecimal() and int(version) != play_version), "review")
+        status("SOURCE_VERSION_EQUALS_PLAY",
+               bool(version and version.isdecimal() and int(version) == play_version), "review")
         target = unique_ini_value(engine, ANDROID_SECTION, "TargetSDKVersion")
         status("API36_OUTSIDE_UE58_RECOMMENDED35", target != "36", "review")
 
     map_file = root / "Content/Maps/TestMap.umap"
     try:
-        ok_map = (not map_file.is_symlink() and map_file.is_file()
-                  and map_file.stat().st_size >= 32
-                  and map_file.open("rb").read(4) == PACKAGE_TAG)
+        ok_map = False
+        if not map_file.is_symlink() and map_file.is_file() and map_file.stat().st_size >= 32:
+            with map_file.open("rb") as stream:
+                ok_map = stream.read(4) == PACKAGE_TAG
     except OSError:
         ok_map = False
     status("UNREAL_MAP_HEADER_PRESENT", ok_map)  # Not a load/cook validation.
