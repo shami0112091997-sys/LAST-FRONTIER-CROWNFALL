@@ -135,13 +135,21 @@ class M133ReadOnlyTests(TestCase):
             "--m106-map", str(self.maps["M106"]),
             "--aab", str(self.aab),
         ]
-        with redirect_stdout(output):
-            status = tool.main(args)
+        with mock.patch.object(tool, "M118_RECORDED_218_AAB_BYTES", self.aab.stat().st_size):
+            with redirect_stdout(output):
+                status = tool.main(args)
         self.assertEqual(status, 0)
         report = output.getvalue()
         self.assertIn("M133_RESULT=STRUCTURAL_AUDIT_COMPLETE", report)
         self.assertIn("M133_218_CRASH_CAUSE=UNCONFIRMED", report)
         self.assertNotIn(str(self.tmp), report)
+
+    def test_original_218_gate_rejects_same_layout_wrong_size(self):
+        facts, valid = tool.inspect_aab(self.aab, expected_bytes=tool.M118_RECORDED_218_AAB_BYTES)
+        self.assertFalse(valid)
+        self.assertEqual(facts["AAB_M118_EXPECTED_SIZE_GATE"],
+                         "BLOCKED_DIFFERENT_ARTIFACT_SIZE")
+        self.assertEqual(facts["AAB_STRUCTURE"], "REVIEW")
 
     def test_missing_aab_has_nonzero_exit(self):
         output = io.StringIO()
