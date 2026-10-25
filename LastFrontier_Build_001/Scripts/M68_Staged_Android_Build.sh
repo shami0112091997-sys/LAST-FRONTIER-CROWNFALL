@@ -13,7 +13,9 @@ test "${M68_BUILD_APPROVED:-}" = YES || stop APPROVAL_REQUIRED
 test "${M68_ASSETS_APPROVED:-}" = YES || stop VERIFY_VM_ASSETS_FIRST
 test "${M68_LOCAL_SIGNING_CONFIRMED:-}" = YES || stop UPLOAD_KEY_NOT_CONFIRMED
 [[ "$NEXT" =~ ^[0-9]+$ && "$MAX" =~ ^[0-9]+$ ]] || stop VERSION_INVALID
-(( NEXT > MAX && NEXT > 217 )) || stop VERSION_NOT_ABOVE_PLAY
+# Version 218 has already appeared in Google Play. Never reuse it, even if
+# a stale or incorrect CONFIRMED_PLAY_MAX_CODE is supplied.
+(( NEXT > MAX && NEXT > 218 )) || stop VERSION_NOT_ABOVE_PLAY_218
 test -f "$SRC/LastFrontier.uproject" || stop SOURCE_NOT_FOUND
 test -s "$SRC/Content/Maps/TestMap.umap" || stop MAP_MISSING
 test -x "$UE/Engine/Binaries/Linux/UnrealEditor-Cmd" || stop UE_EDITOR_MISSING
