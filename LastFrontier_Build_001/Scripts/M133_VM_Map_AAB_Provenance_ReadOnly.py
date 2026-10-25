@@ -76,10 +76,11 @@ def inspect_maps(paths: dict[str, Path]) -> tuple[dict[str, str], bool]:
             continue
         out[f"{name}_MAP_SIZE_BYTES"] = str(fact.size)
         out[f"{name}_MAP_HEADER"] = "UNREAL_MAGIC_ONLY" if fact.header_ok else "INVALID"
-        out[f"{name}_HISTORIC_BAD_GITHUB_BLOB"] = (
-            "YES" if fact.git_oid == HISTORIC_BAD_GITHUB_MAP_GIT_OID else "NO"
-        )
-        if not fact.header_ok:
+        known_failed = fact.git_oid == HISTORIC_BAD_GITHUB_MAP_GIT_OID
+        out[f"{name}_HISTORIC_BAD_GITHUB_BLOB"] = "YES" if known_failed else "NO"
+        # A valid Unreal package tag is not sufficient to consider the map safe.
+        # Block a green result for the exact blob that failed a genuine UE cook.
+        if not fact.header_ok or known_failed:
             valid = False
 
     pairs = (("M63", "M84"), ("M63", "M106"), ("M84", "M106"))
@@ -94,7 +95,12 @@ def inspect_maps(paths: dict[str, Path]) -> tuple[dict[str, str], bool]:
                      f.git_oid == HISTORIC_BAD_GITHUB_MAP_GIT_OID
                      for f in facts.values()) else "NO_OR_UNAVAILABLE"
     )
-    out["MAP_PROVENANCE_STATUS"] = "COMPLETE_STRUCTURAL_ONLY" if valid else "INCOMPLETE"
+    out["MAP_PROVENANCE_STATUS"] = (
+        "REVIEW_KNOWN_COOK_FAILED_BLOB" if
+        any(f.status == "PRESENT" and f.git_oid == HISTORIC_BAD_GITHUB_MAP_GIT_OID
+            for f in facts.values()) else
+        "COMPLETE_STRUCTURAL_ONLY" if valid else "INCOMPLETE"
+    )
     return out, valid
 
 
