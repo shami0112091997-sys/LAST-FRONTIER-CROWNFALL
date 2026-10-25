@@ -12,6 +12,8 @@
 #include "Components/SkyLightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "UObject/ConstructorHelpers.h"
+#include "Engine/World.h"
+#include "TimerManager.h"
 
 ALFWorldDirector::ALFWorldDirector()
 {
@@ -32,13 +34,52 @@ void ALFWorldDirector::BeginPlay()
 {
     Super::BeginPlay();
 
+    // Create the walkable ground immediately; defer the rest only on Android.
+    // Each subsequent stage runs on another frame to avoid a single large
+    // actor creation spike while the first gameplay frame is initializing.
     BuildGroundAndRoads();
+#if PLATFORM_ANDROID
+    NextWorldStage = 0;
+    if (UWorld* World = GetWorld())
+    {
+        World->GetTimerManager().SetTimerForNextTick(this, &ALFWorldDirector::BuildNextStage);
+    }
+#else
     BuildVictorianStronghold();
     BuildIndustrialDistrict();
     BuildLighting();
     SpawnEnemies();
+    UE_LOG(LogTemp, Display, TEXT("CROWNFALL_WORLD_READY_ALL_STAGES"));
+#endif
+}
 
-    UE_LOG(LogTemp, Display, TEXT("CROWNFALL_M60_WORLD=READY"));
+void ALFWorldDirector::BuildNextStage()
+{
+    UWorld* World = GetWorld();
+    if (!World)
+    {
+        return;
+    }
+
+    const int32 CurrentStage = NextWorldStage++;
+    switch (CurrentStage)
+    {
+    case 0: BuildVictorianStronghold(); break;
+    case 1: BuildIndustrialDistrict(); break;
+    case 2: BuildLighting(); break;
+    case 3: SpawnEnemies(); break;
+    default: return;
+    }
+
+    UE_LOG(LogTemp, Display, TEXT("CROWNFALL_WORLD_STAGE_COMPLETE=%d"), CurrentStage);
+    if (NextWorldStage < 4)
+    {
+        World->GetTimerManager().SetTimerForNextTick(this, &ALFWorldDirector::BuildNextStage);
+    }
+    else
+    {
+        UE_LOG(LogTemp, Display, TEXT("CROWNFALL_WORLD_READY_ALL_STAGES"));
+    }
 }
 
 AStaticMeshActor* ALFWorldDirector::SpawnShape(
@@ -183,7 +224,9 @@ void ALFWorldDirector::BuildLighting()
     }
 
     // Warm gas lamps along the boulevard.
-    for (int32 Y = -3000; Y <= 3000; Y += 750)
+    // Lower the dynamic light count on Android; keep the original PC layout.
+    const int32 LampSpacing = PLATFORM_ANDROID ? 1500 : 750;
+    for (int32 Y = -3000; Y <= 3000; Y += LampSpacing)
     {
         for (int32 Side = -1; Side <= 1; Side += 2)
         {
