@@ -104,7 +104,7 @@ def inspect_maps(paths: dict[str, Path]) -> tuple[dict[str, str], bool]:
     return out, valid
 
 
-def inspect_aab(path: Path) -> tuple[dict[str, str], bool]:
+def inspect_aab(path: Path, *, expected_bytes: int | None = None) -> tuple[dict[str, str], bool]:
     info: dict[str, str] = {}
     if not safe_regular(path, MAX_AAB_BYTES):
         return {"AAB_FILE": "MISSING_OR_UNSAFE"}, False
@@ -113,6 +113,14 @@ def inspect_aab(path: Path) -> tuple[dict[str, str], bool]:
         info["AAB_SIZE_BYTES"] = str(meta.st_size)
         info["AAB_SIZE_MATCH_M118_RECORD"] = (
             "YES" if meta.st_size == M118_RECORDED_218_AAB_BYTES else "NO_REVIEW_PROVENANCE"
+        )
+        # Fail closed if the user supplied a different artifact while claiming
+        # to audit the exact 218 Release. Equal size is NOT a trusted hash.
+        size_gate = expected_bytes is None or meta.st_size == expected_bytes
+        info["AAB_M118_EXPECTED_SIZE_GATE"] = (
+            "SKIPPED_SYNTHETIC" if expected_bytes is None else
+            "PASS_SIZE_ONLY_NOT_AUTHENTICATED" if size_gate else
+            "BLOCKED_DIFFERENT_ARTIFACT_SIZE"
         )
         with zipfile.ZipFile(path, mode="r") as bundle:
             entries = bundle.infolist()  # read only central directory: do NOT decompress assets
@@ -149,6 +157,7 @@ def inspect_aab(path: Path) -> tuple[dict[str, str], bool]:
                 # A bundle without that module cannot be cleared by this v218 gate.
                 and "obbassets" in modules
                 and len(obb) > 0
+                and size_gate
             )
             info["AAB_STRUCTURE"] = "PASS_METADATA_ONLY" if structurally_ok else "REVIEW"
             info["AAB_FILE"] = "READABLE_ZIP"
@@ -193,7 +202,9 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     maps, map_ok = inspect_maps({"M63": args.m63_map, "M84": args.m84_map,
                                   "M106": args.m106_map})
-    aab, aab_ok = inspect_aab(args.aab)
+    aab, aab_ok = inspect_aab(
+        args.aab, expected_bytes=M118_RECORDED_218_AAB_BYTES
+    )
     print("M133_MODE=READ_ONLY_NO_SECRET_DATA")
     for key, value in sorted({**maps, **aab}.items()):
         print(f"M133_{key}={value}")
