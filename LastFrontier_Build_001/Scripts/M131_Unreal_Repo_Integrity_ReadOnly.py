@@ -8,12 +8,17 @@ A source PASS is NOT proof that versionCode 218 launched successfully.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import re
 import sys
 
 PACKAGE_TAG = bytes.fromhex("c1832a9e")
+# Git blob OID at failed UE M60 cook run 37645589203 (2026-10-07).
+# This matches the current GitHub TestMap.umap. This is historical engine
+# evidence, NOT proof that the private 218 VM built from the same map.
+HISTORIC_BAD_MAP_GIT_OID = "965b78fc071c21412f966b70712eb30724799c20"
 ANDROID_SECTION = "[/script/androidruntimesettings.androidruntimesettings]"
 PAD_SECTION = "[/script/googlepadeditor.googlepadruntimesettings]"
 
@@ -92,14 +97,23 @@ def audit(repo: Path, play_version: int = 218) -> tuple[dict[str, str], list[str
         status("API36_OUTSIDE_UE58_RECOMMENDED35", target != "36", "review")
 
     map_file = root / "Content/Maps/TestMap.umap"
+    map_git_oid = None
     try:
         ok_map = False
-        if not map_file.is_symlink() and map_file.is_file() and map_file.stat().st_size >= 32:
+        if not map_file.is_symlink() and map_file.is_file() and 32 <= map_file.stat().st_size <= 16_000_000:
             with map_file.open("rb") as stream:
-                ok_map = stream.read(4) == PACKAGE_TAG
+                data = stream.read()
+            ok_map = data[:4] == PACKAGE_TAG
+            map_git_oid = hashlib.sha1(
+                b"blob " + str(len(data)).encode("ascii") + b"\0" + data
+            ).hexdigest()
     except OSError:
         ok_map = False
-    status("UNREAL_MAP_HEADER_PRESENT", ok_map)  # Not a load/cook validation.
+    status("UNREAL_MAP_HEADER_PRESENT", ok_map)  # NOT a cooked or loadable map proof.
+    # The identical Git map was rejected by the real UE 5.8 cook in run 37645589203:
+    # LogLinker: Serialization error: FName index 64 outside of valid range [0, 44).
+    # Surface this known obstacle even though the first 4 magic bytes are intact.
+    status("TESTMAP_HISTORIC_COOK_FAILURE", map_git_oid != HISTORIC_BAD_MAP_GIT_OID, "review")
 
     status("AI_CONTROLLER_FOR_SPAWNED_ENEMIES", bool(enemy
            and "AIControllerClass = AAIController::StaticClass();" in enemy
