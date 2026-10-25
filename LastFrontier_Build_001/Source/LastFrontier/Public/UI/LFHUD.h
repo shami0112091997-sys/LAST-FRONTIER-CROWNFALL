@@ -16,4 +16,6 @@ private:
     // Avoid a world-wide actor lookup on every rendered frame.
     float LastEnemyCountRefreshSeconds = -1.0f;
     int32 CachedEnemyCount = 0;
+    // Avoid showing victory before deferred enemy spawning has happened.
+    bool bHasSeenEnemies = false;
 };
