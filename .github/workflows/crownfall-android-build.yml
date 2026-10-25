@@ -1,4 +1,4 @@
-name: CROWNFALL Google Play Release
+name: LEGACY CROWNFALL WebView 214 - NOT Unreal Stronghold 218
 
 on:
   workflow_dispatch:
@@ -56,30 +56,31 @@ jobs:
           fi
           echo "Production game asset validated: $(wc -c < "$TARGET") bytes"
 
-      - name: Require Google Play upload-key secrets
+      # This legacy workflow builds the WebView 214 application, NOT Unreal 218.
+      # Keep signing secrets in the build step only; never persist passwords to
+      # GITHUB_ENV for every later step.
+      - name: Build LEGACY WebView AAB with step-scoped signing
+        working-directory: CROWNFALL_Stronghold_Android
         shell: bash
         env:
           KEYSTORE_B64: ${{ secrets.CROWNFALL_UPLOAD_KEYSTORE_B64 }}
-          STORE_PASSWORD: ${{ secrets.CROWNFALL_UPLOAD_STORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.CROWNFALL_UPLOAD_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.CROWNFALL_UPLOAD_KEY_PASSWORD }}
+          CROWNFALL_KEYSTORE_PASSWORD: ${{ secrets.CROWNFALL_UPLOAD_STORE_PASSWORD }}
+          CROWNFALL_KEY_ALIAS: ${{ secrets.CROWNFALL_UPLOAD_KEY_ALIAS }}
+          CROWNFALL_KEY_PASSWORD: ${{ secrets.CROWNFALL_UPLOAD_KEY_PASSWORD }}
         run: |
           set -euo pipefail
+          umask 077
           test -n "$KEYSTORE_B64"
-          test -n "$STORE_PASSWORD"
-          test -n "$KEY_ALIAS"
-          test -n "$KEY_PASSWORD"
+          test -n "$CROWNFALL_KEYSTORE_PASSWORD"
+          test -n "$CROWNFALL_KEY_ALIAS"
+          test -n "$CROWNFALL_KEY_PASSWORD"
           KEYSTORE="$RUNNER_TEMP/crownfall-upload.jks"
+          trap 'rm -f -- "$KEYSTORE"' EXIT
           printf '%s' "$KEYSTORE_B64" | base64 --decode > "$KEYSTORE"
           test -s "$KEYSTORE"
-          echo "CROWNFALL_KEYSTORE_FILE=$KEYSTORE" >> "$GITHUB_ENV"
-          echo "CROWNFALL_KEYSTORE_PASSWORD=$STORE_PASSWORD" >> "$GITHUB_ENV"
-          echo "CROWNFALL_KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
-          echo "CROWNFALL_KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
-
-      - name: Build Google Play AAB
-        working-directory: CROWNFALL_Stronghold_Android
-        run: gradle :app:bundleRelease --stacktrace
+          chmod 600 "$KEYSTORE"
+          export CROWNFALL_KEYSTORE_FILE="$KEYSTORE"
+          gradle :app:bundleRelease --stacktrace
 
       - name: Verify Google Play bundle
         shell: bash
