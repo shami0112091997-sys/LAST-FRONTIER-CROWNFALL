@@ -50,6 +50,7 @@ void ALFWorldDirector::BeginPlay()
     BuildLighting();
     SpawnEnemies();
     UE_LOG(LogTemp, Display, TEXT("CROWNFALL_WORLD_READY_ALL_STAGES"));
+    UE_LOG(LogTemp, Display, TEXT("CROWNFALL_M60_WORLD=READY"));
 #endif
 }
 
@@ -79,6 +80,7 @@ void ALFWorldDirector::BuildNextStage()
     else
     {
         UE_LOG(LogTemp, Display, TEXT("CROWNFALL_WORLD_READY_ALL_STAGES"));
+    UE_LOG(LogTemp, Display, TEXT("CROWNFALL_M60_WORLD=READY"));
     }
 }
 
