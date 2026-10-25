@@ -48,6 +48,10 @@ class RepoGateTests(unittest.TestCase):
                    "#if PLATFORM_ANDROID\nSetTimerForNextTick\nBuildNextStage()")
         self.write("LastFrontier_Build_001/Scripts/M68_Staged_Android_Build.sh",
                    "(( NEXT > MAX && NEXT > 218 ))")
+        self.write("LastFrontier_Build_001/Source/LastFrontier/Private/Core/LFGameInstance.cpp",
+                   "CROWNFALL_BOOT_GAMEINSTANCE_INIT=M131")
+        self.write("LastFrontier_Build_001/Source/LastFrontier/Private/Core/LFGameMode.cpp",
+                   "CROWNFALL_BOOT_GAMEMODE_BEGINPLAY=M131")
         self.write("CROWNFALL_Stronghold_Android/app/build.gradle.kts",
                    'applicationId = "com.crownfall.stronghold"')
         self.write(".github/workflows/crownfall-android-build.yml",
