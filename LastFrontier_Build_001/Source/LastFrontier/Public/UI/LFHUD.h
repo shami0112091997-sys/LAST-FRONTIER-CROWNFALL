@@ -11,4 +11,9 @@ class LASTFRONTIER_API ALFHUD : public AHUD
 
 public:
     virtual void DrawHUD() override;
+
+private:
+    // Avoid a world-wide actor lookup on every rendered frame.
+    float LastEnemyCountRefreshSeconds = -1.0f;
+    int32 CachedEnemyCount = 0;
 };
