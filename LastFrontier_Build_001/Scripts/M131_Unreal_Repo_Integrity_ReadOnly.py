@@ -109,6 +109,9 @@ def audit(repo: Path, play_version: int = 218) -> tuple[dict[str, str], list[str
            and "LastEnemyCountRefreshSeconds" in hud
            and "CachedEnemyCount" in hud_header
            and ">= 0.25f" in hud))
+    status("HUD_NO_PREMATURE_VICTORY", bool(hud and hud_header
+           and "bHasSeenEnemies" in hud_header
+           and "bHasSeenEnemies && CachedEnemyCount == 0" in hud))
     status("ANDROID_STARTUP_STAGED", bool(world
            and "SetTimerForNextTick" in world and "#if PLATFORM_ANDROID" in world
            and "BuildNextStage()" in world))
