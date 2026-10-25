@@ -139,7 +139,10 @@ def inspect_aab(path: Path) -> tuple[dict[str, str], bool]:
                 and "base/manifest/AndroidManifest.xml" in unique
                 and int(info["AAB_DEX_COUNT"]) > 0
                 and int(info["AAB_ARM64_SO_COUNT"]) > 0
-                and ("obbassets" not in modules or len(obb) > 0)
+                # Google Play's inspected v218 bundle uses obbassets install-time.
+                # A bundle without that module cannot be cleared by this v218 gate.
+                and "obbassets" in modules
+                and len(obb) > 0
             )
             info["AAB_STRUCTURE"] = "PASS_METADATA_ONLY" if structurally_ok else "REVIEW"
             info["AAB_FILE"] = "READABLE_ZIP"
