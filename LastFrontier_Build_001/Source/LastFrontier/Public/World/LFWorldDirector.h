@@ -38,6 +38,10 @@ private:
         const FRotator& Rotation = FRotator::ZeroRotator,
         const TCHAR* Label = TEXT("CrownfallShape"));
 
+    // Spread expensive world creation over several Android frames.
+    void BuildNextStage();
+    int32 NextWorldStage = 0;
+
     void BuildGroundAndRoads();
     void BuildVictorianStronghold();
     void BuildIndustrialDistrict();
