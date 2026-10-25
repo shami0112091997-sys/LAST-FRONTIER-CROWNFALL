@@ -1,6 +1,7 @@
 #include "Enemy/LFEnemy.h"
 
 #include "Character/LFCharacter.h"
+#include "AIController.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -12,6 +13,10 @@ ALFEnemy::ALFEnemy()
     PrimaryActorTick.bCanEverTick = true;
 
     GetCapsuleComponent()->InitCapsuleSize(44.0f, 92.0f);
+    // Runtime-spawned enemies require an AI controller to process walking input.
+    AIControllerClass = AAIController::StaticClass();
+    AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
+
     GetCharacterMovement()->MaxWalkSpeed = ChaseSpeed;
     GetCharacterMovement()->bOrientRotationToMovement = true;
     bUseControllerRotationYaw = false;
