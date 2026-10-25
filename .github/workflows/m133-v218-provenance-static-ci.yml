@@ -8,6 +8,7 @@ on:
       - ".github/workflows/m133-v218-provenance-static-ci.yml"
       - "LastFrontier_Build_001/Scripts/M133_VM_Map_AAB_Provenance_ReadOnly.py"
       - "LastFrontier_Build_001/Scripts/test_M133_readonly_provenance.py"
+      - "LastFrontier_Build_001/Scripts/M133_VM_OnePaste_ReadOnly.sh"
       - "LastFrontier_Build_001/Scripts/M131_Unreal_Repo_Integrity_ReadOnly.py"
       - "LastFrontier_Build_001/Scripts/test_M131_source_integrity.py"
   workflow_dispatch:
@@ -43,6 +44,17 @@ jobs:
           python3 -m unittest discover \
             -s LastFrontier_Build_001/Scripts \
             -p 'test_M13*.py' -v
+      - name: Validate standalone VM one-paste script without any VM access
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n LastFrontier_Build_001/Scripts/M133_VM_OnePaste_ReadOnly.sh
+          bash LastFrontier_Build_001/Scripts/M133_VM_OnePaste_ReadOnly.sh |
+            tee /tmp/m133-onepaste-synthetic-output.txt
+          grep -Fqx 'AAB_218=NOT_FOUND_OR_UNSAFE' /tmp/m133-onepaste-synthetic-output.txt
+          grep -Fqx 'MAP_M84=NOT_FOUND_OR_UNSAFE' /tmp/m133-onepaste-synthetic-output.txt
+          grep -Fqx 'CHECK=READ_ONLY; CRASH_CAUSE=UNKNOWN' /tmp/m133-onepaste-synthetic-output.txt
+          echo 'M133_ONEPASTE_NO_VM_TEST=PASS'
       - name: Verify read-only Unreal source gate
         shell: bash
         run: |
