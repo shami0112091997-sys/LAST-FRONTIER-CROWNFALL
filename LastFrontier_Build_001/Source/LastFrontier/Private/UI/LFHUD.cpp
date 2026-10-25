@@ -5,6 +5,7 @@
 #include "Engine/Canvas.h"
 #include "Engine/Engine.h"
 #include "Engine/Font.h"
+#include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
 
 void ALFHUD::DrawHUD()
@@ -32,8 +33,20 @@ void ALFHUD::DrawHUD()
 
     ALFCharacter* Player = Cast<ALFCharacter>(UGameplayStatics::GetPlayerCharacter(this, 0));
 
-    TArray<AActor*> Enemies;
-    UGameplayStatics::GetAllActorsOfClass(this, ALFEnemy::StaticClass(), Enemies);
+    // DrawHUD is called per frame; query the world no more than four times
+    // per second, preserving a responsive count without an O(world) scan every frame.
+    if (const UWorld* World = GetWorld())
+    {
+        const float Now = World->GetTimeSeconds();
+        if (LastEnemyCountRefreshSeconds < 0.0f || Now < LastEnemyCountRefreshSeconds ||
+            Now - LastEnemyCountRefreshSeconds >= 0.25f)
+        {
+            TArray<AActor*> Enemies;
+            UGameplayStatics::GetAllActorsOfClass(this, ALFEnemy::StaticClass(), Enemies);
+            CachedEnemyCount = Enemies.Num();
+            LastEnemyCountRefreshSeconds = Now;
+        }
+    }
 
     const FString Title = TEXT("LAST FRONTIER: CROWNFALL  |  UNREAL FIRST PLAYABLE");
     DrawText(Title, FLinearColor(0.95f, 0.72f, 0.28f, 1.0f), 32.0f, 28.0f, Font, 1.25f, false);
@@ -41,13 +54,13 @@ void ALFHUD::DrawHUD()
     const FString Status = FString::Printf(
         TEXT("HP %d / 100     Enemies %d     Objective: clear the Royal District"),
         Player ? FMath::RoundToInt(Player->GetHealth()) : 0,
-        Enemies.Num());
+        CachedEnemyCount);
     DrawText(Status, FLinearColor::White, 32.0f, 62.0f, Font, 1.0f, false);
 
     DrawText(TEXT("Move: WASD / left stick   Look: mouse / right stick   Fire: LMB / trigger / tap right side"),
         FLinearColor(0.72f, 0.82f, 0.88f, 1.0f), 32.0f, Canvas->ClipY - 46.0f, Font, 0.9f, false);
 
-    if (Enemies.Num() == 0)
+    if (CachedEnemyCount == 0)
     {
         DrawText(TEXT("ROYAL DISTRICT SECURED"),
             FLinearColor(0.95f, 0.72f, 0.28f, 1.0f), CX - 145.0f, CY - 90.0f, Font, 1.6f, false);
