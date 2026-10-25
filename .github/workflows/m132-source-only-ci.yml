@@ -1,0 +1,64 @@
+name: M132 CROWNFALL source-only verification (no Android build)
+
+on:
+  push:
+    branches:
+      - m132-ci-source-audit-only
+    paths:
+      - ".github/workflows/m132-source-only-ci.yml"
+      - "LastFrontier_Build_001/Source/**"
+      - "LastFrontier_Build_001/Config/**"
+      - "LastFrontier_Build_001/LastFrontier.uproject"
+      - "LastFrontier_Build_001/Scripts/M131_Unreal_Repo_Integrity_ReadOnly.py"
+      - "LastFrontier_Build_001/Scripts/test_M131_source_integrity.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m132-source-only
+  cancel-in-progress: true
+
+jobs:
+  source-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Read source only
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Python syntax and M131 synthetic regression tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile \
+            LastFrontier_Build_001/Scripts/M131_Unreal_Repo_Integrity_ReadOnly.py \
+            LastFrontier_Build_001/Scripts/test_M131_source_integrity.py
+          python3 -m unittest discover \
+            -s LastFrontier_Build_001/Scripts \
+            -p 'test_M131_*.py' -v
+
+      - name: Validate tracked Unreal source integrity without Unreal
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 LastFrontier_Build_001/Scripts/M131_Unreal_Repo_Integrity_ReadOnly.py \
+            --repo . --play-version-code 218
+
+      - name: Parse Bash syntax only (do not execute build scripts)
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n LastFrontier_Build_001/Scripts/M68_Staged_Android_Build.sh
+          bash -n LastFrontier_Build_001/Scripts/M106_Prepare_Distribution_Sandbox.sh
+          echo "M132_BASH_SYNTAX=PASS"
+
+      - name: Explicit execution boundary
+        run: |
+          echo 'M132_MODE=SOURCE_ONLY'
+          echo 'M132_NO_UE_BUILD_COOK_GRADLE=YES'
+          echo 'M132_NO_SIGNING_KEYS_OR_PLAY_UPLOAD=YES'
+          echo 'M132_ANDROID_RUNTIME_218=NOT_TESTED'
