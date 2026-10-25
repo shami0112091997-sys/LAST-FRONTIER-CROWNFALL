@@ -58,6 +58,8 @@ def audit(repo: Path, play_version: int = 218) -> tuple[dict[str, str], list[str
     world = text_file(root / "Source/LastFrontier/Private/World/LFWorldDirector.cpp")
     hud = text_file(root / "Source/LastFrontier/Private/UI/LFHUD.cpp")
     hud_header = text_file(root / "Source/LastFrontier/Public/UI/LFHUD.h")
+    game_instance = text_file(root / "Source/LastFrontier/Private/Core/LFGameInstance.cpp")
+    game_mode = text_file(root / "Source/LastFrontier/Private/Core/LFGameMode.cpp")
     legacy = text_file(repo / "CROWNFALL_Stronghold_Android/app/build.gradle.kts")
     legacy_workflow = text_file(repo / ".github/workflows/crownfall-android-build.yml")
     release_gate = text_file(root / "Scripts/M68_Staged_Android_Build.sh")
@@ -112,6 +114,9 @@ def audit(repo: Path, play_version: int = 218) -> tuple[dict[str, str], list[str
            and "BuildNextStage()" in world))
     status("RELEASE_GATE_EXCLUDES_218", bool(release_gate
            and "NEXT > 218" in release_gate))
+    status("EARLY_BOOT_MARKERS_PRESENT", bool(game_instance and game_mode
+           and "CROWNFALL_BOOT_GAMEINSTANCE_INIT=M131" in game_instance
+           and "CROWNFALL_BOOT_GAMEMODE_BEGINPLAY=M131" in game_mode))
 
     same_id = bool(legacy and '"com.crownfall.stronghold"' in legacy)
     status("LEGACY_SAME_PACKAGE_ID", not same_id, "review")
