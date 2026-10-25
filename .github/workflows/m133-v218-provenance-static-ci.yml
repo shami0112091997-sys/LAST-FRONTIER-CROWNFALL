@@ -1,0 +1,54 @@
+name: M133 VM provenance tool synthetic safety tests - no VM access
+
+on:
+  push:
+    branches:
+      - m133-v218-provenance-readonly
+    paths:
+      - ".github/workflows/m133-v218-provenance-static-ci.yml"
+      - "LastFrontier_Build_001/Scripts/M133_VM_Map_AAB_Provenance_ReadOnly.py"
+      - "LastFrontier_Build_001/Scripts/test_M133_readonly_provenance.py"
+      - "LastFrontier_Build_001/Scripts/M131_Unreal_Repo_Integrity_ReadOnly.py"
+      - "LastFrontier_Build_001/Scripts/test_M131_source_integrity.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m133-provenance-static
+  cancel-in-progress: true
+
+jobs:
+  synthetic-readonly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Python syntax compile (no Unreal)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile \
+            LastFrontier_Build_001/Scripts/M131_Unreal_Repo_Integrity_ReadOnly.py \
+            LastFrontier_Build_001/Scripts/M133_VM_Map_AAB_Provenance_ReadOnly.py \
+            LastFrontier_Build_001/Scripts/test_M131_source_integrity.py \
+            LastFrontier_Build_001/Scripts/test_M133_readonly_provenance.py
+      - name: Run M131 and M133 offline synthetic tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover \
+            -s LastFrontier_Build_001/Scripts \
+            -p 'test_M13*.py' -v
+      - name: Verify read-only Unreal source gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 LastFrontier_Build_001/Scripts/M131_Unreal_Repo_Integrity_ReadOnly.py \
+            --repo . --play-version-code 218
+          echo 'M133_VM_ACCESS=NOT_ATTEMPTED'
+          echo 'M133_AAB_218=NOT_ACCESSED'
+          echo 'M133_UNREAL_BUILD_AND_PLAY_UPLOAD=NOT_PERFORMED'
