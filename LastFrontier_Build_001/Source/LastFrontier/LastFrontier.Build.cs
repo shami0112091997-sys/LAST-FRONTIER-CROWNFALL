@@ -11,7 +11,8 @@ public class LastFrontier : ModuleRules
             "CoreUObject",
             "Engine",
             "InputCore",
-            "NetCore"
+            "NetCore",
+            "AIModule"
         });
     }
 }
