@@ -1,0 +1,114 @@
+name: M137 Secure CROWNFALL Unreal map recovery offline preflight
+
+on:
+  push:
+    branches: [m137-secure-map-recovery]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m137-secure-map-preflight
+  cancel-in-progress: true
+
+jobs:
+  isolated-security-and-recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONNOUSERSITE: "1"
+
+    steps:
+      - name: Fetch only repository source, do not persist tokens
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Parse Python and Bash without executing Unreal
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n LastFrontier_Build_001/Scripts/M137_Run_UE58_Map_ExistingEngine_Only.sh
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+          for n in (
+              "M136_Isolated_Map_Sandbox.py",
+              "M136_Create_TestMap_In_Unreal.py",
+              "test_M136_isolated_unreal_map.py",
+          ):
+              file = Path("LastFrontier_Build_001/Scripts") / n
+              ast.parse(file.read_text(), filename=str(file))
+          print("M137_PYTHON_AND_BASH_SYNTAX=PASS")
+          PY
+
+      - name: Test all source and map recovery regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover \
+            -s LastFrontier_Build_001/Scripts \
+            -p 'test_M13*.py' -v
+
+      - name: Prove only whitelisted files enter isolated workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          project=LastFrontier_Build_001
+          before="$(sha256sum "$project/Content/Maps/TestMap.umap" | cut -d' ' -f1)"
+          temp="$RUNNER_TEMP/M137-tested-sandbox"
+          python3 "$project/Scripts/M136_Isolated_Map_Sandbox.py" \
+            prepare --repo . --sandbox "$temp"
+          test -f "$temp/$project/LastFrontier.uproject"
+          test -f "$temp/$project/Scripts/M136_Create_TestMap_In_Unreal.py"
+          test -f "$temp/M136_Quarantine/TestMap_M60_KNOWN_BAD_DO_NOT_USE.umap"
+          test ! -e "$temp/$project/Content/Maps/TestMap.umap"
+          test ! -e "$temp/$project/Docs"
+          test ! -e "$temp/$project/Saved"
+          test ! -e "$temp/$project/Binaries"
+          test "$before" = "$(sha256sum "$project/Content/Maps/TestMap.umap" | cut -d' ' -f1)"
+          echo 'M137_ISOLATED_ALLOWLIST_AND_ORIGINAL_PROTECTION=PASS'
+
+      - name: Refuse absent Unreal engine before touching sandbox
+        shell: bash
+        run: |
+          set -euo pipefail
+          testdir="$RUNNER_TEMP/M137-intentionally-absent-engine"
+          mkdir -p "$testdir"
+          sandbox="$RUNNER_TEMP/M137-must-not-be-created"
+          code=0
+          bash LastFrontier_Build_001/Scripts/M137_Run_UE58_Map_ExistingEngine_Only.sh \
+            "$GITHUB_WORKSPACE" "$testdir" "$sandbox" \
+            > "$RUNNER_TEMP/m137-missing-engine.txt" 2>&1 || code=$?
+          test "$code" -eq 2
+          grep -Fqx 'M137_STATUS=BLOCKED_NO_EXISTING_UNREAL_EDITOR' \
+            "$RUNNER_TEMP/m137-missing-engine.txt"
+          test ! -e "$sandbox"
+          echo 'M137_ENGINE_MISSING_NO_DOWNLOAD_OR_SANDBOX_MODIFICATION=PASS'
+
+      - name: Read-only historic map failure guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          code=0
+          python3 LastFrontier_Build_001/Scripts/M135_KnownBadMap_ReleaseBlock_ReadOnly.py \
+            --map LastFrontier_Build_001/Content/Maps/TestMap.umap \
+            > "$RUNNER_TEMP/m135.txt" || code=$?
+          test "$code" -eq 2
+          grep -Fqx 'M135_MAP_STATUS=BLOCKED_HISTORIC_UE_COOK_FAILURE' \
+            "$RUNNER_TEMP/m135.txt"
+          echo 'M137_HISTORIC_BAD_MAP_BLOCK=PASS'
+
+      - name: Explicit summary: source tests are NOT Unreal Android tests
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '## M137 security and offline verification'
+            echo 'Only a short Python/Bash test ran. No Unreal download or execution.'
+            echo 'No Google Cloud VM, JKS, Android AAB, Play or user phone was accessed.'
+            echo 'Historic GitHub TestMap remains rejected pending a real UE map.'
+            echo 'Existing-engine runner is present but has **not** run against Unreal.'
+          } >> "$GITHUB_STEP_SUMMARY"
