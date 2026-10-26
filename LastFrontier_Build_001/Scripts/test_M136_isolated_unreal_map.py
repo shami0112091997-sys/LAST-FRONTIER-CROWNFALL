@@ -111,7 +111,10 @@ class M136IsolatedMapTests(unittest.TestCase):
         # This only tests the finalize logic: marker is a synthetic fixture,
         # NOT proof that UE actually generated a playable .umap.
         log = self.root / "editor.log"
-        log.write_text("Fake CI fixture only\nCROWNFALL_M136_UE_LEVEL_GENERATED=PASS\n")
+        log.write_text(
+            "Fake CI fixture only\nCROWNFALL_M136_UE_LEVEL_GENERATED=PASS\n"
+            "CROWNFALL_M137_UE_TESTMAP_EDITOR_RELOAD=PASS\n"
+        )
         with patch.object(m, "BAD_OID", self.oid):
             status, rc = m.finalize(self.sandbox, log)
         self.assertEqual(rc, 0)
@@ -121,6 +124,28 @@ class M136IsolatedMapTests(unittest.TestCase):
         self.assertEqual((self.sandbox / m.PROJECT / m.CONFIG).read_text(),
                          (self.project / m.CONFIG).read_text())
         self.assertEqual((self.project / m.MAP).read_bytes(), self.fake_map)
+
+    def test_finalize_rejects_success_without_editor_reload_marker(self):
+        self.prepare()
+        new_map = m.MAGIC + b"synthetic_new_map_not_UE" + b"x" * 96
+        (self.sandbox / m.PROJECT / m.MAP).write_bytes(new_map)
+        log = self.root / "editor.log"
+        log.write_text("fake fixture\nCROWNFALL_M136_UE_LEVEL_GENERATED=PASS\n")
+        status, rc = m.finalize(self.sandbox, log)
+        self.assertEqual((status, rc), ("BLOCKED_NO_UNREAL_EDITOR_RELOAD_MARKER", 2))
+
+    def test_finalize_rejects_unreal_fatal_even_with_both_markers(self):
+        self.prepare()
+        new_map = m.MAGIC + b"synthetic_new_map_not_UE" + b"x" * 96
+        (self.sandbox / m.PROJECT / m.MAP).write_bytes(new_map)
+        log = self.root / "editor.log"
+        log.write_text(
+            "CROWNFALL_M136_UE_LEVEL_GENERATED=PASS\n"
+            "CROWNFALL_M137_UE_TESTMAP_EDITOR_RELOAD=PASS\n"
+            "Fatal error: synthetic fixture only\n"
+        )
+        status, rc = m.finalize(self.sandbox, log)
+        self.assertEqual((status, rc), ("BLOCKED_UNREAL_EDITOR_LOG_CONTAINS_FAILURE", 2))
 
     def test_private_binary_files_not_copied_into_sandbox(self):
         (self.project / "private.jks").write_bytes(b"fake_secret")
