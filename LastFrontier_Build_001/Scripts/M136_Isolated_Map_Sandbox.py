@@ -188,8 +188,15 @@ def finalize(sandbox: Path, editor_log: Path) -> tuple[str, int]:
     try:
         if not safe_file(editor_log, 20_000_000):
             return "BLOCKED_NO_REAL_UNREAL_EDITOR_LOG", 2
-        if "CROWNFALL_M136_UE_LEVEL_GENERATED=PASS" not in editor_log.read_text(errors="replace"):
+        log = editor_log.read_text(errors="replace")
+        if "CROWNFALL_M136_UE_LEVEL_GENERATED=PASS" not in log:
             return "BLOCKED_NO_UNREAL_MAP_GENERATION_MARKER", 2
+        if "CROWNFALL_M137_UE_TESTMAP_EDITOR_RELOAD=PASS" not in log:
+            return "BLOCKED_NO_UNREAL_EDITOR_RELOAD_MARKER", 2
+        if any(x in log for x in (
+            "CROWNFALL_M136_FAILURE=", "Fatal error:", "Assertion failed:"
+        )):
+            return "BLOCKED_UNREAL_EDITOR_LOG_CONTAINS_FAILURE", 2
         oid, magic = git_oid(src / MAP)
         if oid == BAD_OID or magic != MAGIC:
             return "BLOCKED_MAP_NOT_NEW_UNREAL_PACKAGE", 2
