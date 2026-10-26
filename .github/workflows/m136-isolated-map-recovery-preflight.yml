@@ -1,0 +1,100 @@
+name: M136 Isolated Unreal TestMap recovery preflight - no UE build
+
+on:
+  push:
+    branches:
+      - m136-isolated-unreal-map-recovery
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m136-isolated-map-preflight
+  cancel-in-progress: true
+
+jobs:
+  validate-map-recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONNOUSERSITE: "1"
+    steps:
+      - name: Checkout project without persisting credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Syntax check all M136 Python scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+          for name in ("M136_Isolated_Map_Sandbox.py",
+                       "M136_Create_TestMap_In_Unreal.py",
+                       "test_M136_isolated_unreal_map.py"):
+              p = Path("LastFrontier_Build_001/Scripts") / name
+              ast.parse(p.read_text(encoding="utf-8"), filename=str(p))
+          print("M136_PYTHON_SYNTAX=PASS")
+          PY
+
+      - name: Run all earlier + 10 new synthetic regression tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover \
+            -s LastFrontier_Build_001/Scripts \
+            -p 'test_M13*.py' -v
+
+      - name: Verify standalone recovery uses a new ephemeral sandbox
+        shell: bash
+        run: |
+          set -euo pipefail
+          project=LastFrontier_Build_001
+          original_before="$(sha256sum "$project/Content/Maps/TestMap.umap" | cut -d' ' -f1)"
+          python3 "$project/Scripts/M136_Isolated_Map_Sandbox.py" prepare \
+            --repo . \
+            --sandbox "$RUNNER_TEMP/crownfall-m136-unreal-project"
+          sandbox="$RUNNER_TEMP/crownfall-m136-unreal-project"
+          test -f "$sandbox/M136_Quarantine/TestMap_M60_KNOWN_BAD_DO_NOT_USE.umap"
+          test ! -f "$sandbox/$project/Content/Maps/TestMap.umap"
+          grep -Fq 'PythonScriptPlugin' "$sandbox/$project/LastFrontier.uproject"
+          grep -Fq 'EditorStartupMap=/Engine/Maps/Entry' "$sandbox/$project/Config/DefaultEngine.ini"
+          original_after="$(sha256sum "$project/Content/Maps/TestMap.umap" | cut -d' ' -f1)"
+          test "$original_before" = "$original_after"
+          echo 'M136_BROKEN_MAP_QUARANTINED_IN_EPHEMERAL_SANDBOX=PASS'
+          echo 'M136_SOURCE_MAP_UNCHANGED=PASS'
+          echo 'M136_NEW_MAP_GENERATED_BY_UNREAL=NOT_RUN'
+
+      - name: Confirm previous map-cook blocker still prevents release
+        shell: bash
+        run: |
+          set -euo pipefail
+          code=0
+          python3 LastFrontier_Build_001/Scripts/M135_KnownBadMap_ReleaseBlock_ReadOnly.py \
+            --map LastFrontier_Build_001/Content/Maps/TestMap.umap \
+            > "$RUNNER_TEMP/m135-map-gate.txt" || code="$?"
+          test "$code" -eq 2
+          grep -Fqx 'M135_MAP_STATUS=BLOCKED_HISTORIC_UE_COOK_FAILURE' \
+            "$RUNNER_TEMP/m135-map-gate.txt"
+          echo 'M136_HISTORICAL_CORRUPT_MAP_RELEASE_BLOCKED=PASS'
+
+      - name: Summary and intentionally unexecuted expensive steps
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '## M136: clean Unreal map regeneration is prepared but NOT executed.'
+            echo ''
+            echo 'The original GitHub TestMap failed a genuine UE 5.8 cook.'
+            echo 'This free short test verifies a separate temporary sandbox and'
+            echo 'the Python Editor generator script, without downloading UE.'
+            echo ''
+            echo '**Unverified:** real UE5.8 editor map generation, C++ compile,'
+            echo 'Android cook/package, Play install-time asset mount and runtime.'
+            echo ''
+            echo 'No main/M66/M84/M106, JKS, Google Play or paid VM changed.'
+          } >> "$GITHUB_STEP_SUMMARY"
