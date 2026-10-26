@@ -50,13 +50,16 @@ def validate_minimal_source(project: Path) -> str | None:
     source_files = [p for p in source.rglob("*") if p.is_file()]
     if not source_files or any(p.suffix.lower() not in SAFE_SOURCE_SUFFIXES for p in source_files):
         return "BLOCKED_NON_CODE_SOURCE_ARTIFACT"
-    cfg = project / CONFIG
-    try:
-        ini = cfg.read_text(encoding="utf-8-sig")
-    except (OSError, UnicodeError):
-        return "BLOCKED_DEFAULTENGINE_UNREADABLE"
-    if SENSITIVE_INI_KEY.search(ini):
-        return "BLOCKED_SIGNING_OR_SECRET_CONFIG_KEY"
+    for name in SAFE_CONFIG_NAMES:
+        cfg = project / "Config" / name
+        if not cfg.is_file():
+            continue
+        try:
+            ini = cfg.read_text(encoding="utf-8-sig")
+        except (OSError, UnicodeError):
+            return "BLOCKED_CONFIG_UNREADABLE"
+        if SENSITIVE_INI_KEY.search(ini):
+            return "BLOCKED_SIGNING_OR_SECRET_CONFIG_KEY"
     return None
 
 
