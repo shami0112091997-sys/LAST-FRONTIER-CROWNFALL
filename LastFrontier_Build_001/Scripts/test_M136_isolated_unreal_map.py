@@ -36,6 +36,14 @@ class M136IsolatedMapTests(unittest.TestCase):
         (self.project / m.DESCRIPTOR).write_text(json.dumps(DESCRIPTOR))
         (self.project / m.CONFIG).parent.mkdir(parents=True)
         (self.project / m.CONFIG).write_text(GAME_INI)
+        (self.project / "Source/LastFrontier").mkdir(parents=True)
+        (self.project / "Source/LastFrontier/LastFrontier.Build.cs").write_text(
+            "using UnrealBuildTool; // synthetic fixture only"
+        )
+        (self.project / "Scripts").mkdir(parents=True)
+        (self.project / "Scripts/M136_Create_TestMap_In_Unreal.py").write_text(
+            Path(__file__).with_name("M136_Create_TestMap_In_Unreal.py").read_text()
+        )
         self.fake_map = m.MAGIC + b"intentionally_corrupt_fixture" + b"0" * 64
         (self.project / m.MAP).write_bytes(self.fake_map)
         self.oid = hashlib.sha1(
@@ -120,6 +128,49 @@ class M136IsolatedMapTests(unittest.TestCase):
         self.prepare()
         self.assertFalse((self.sandbox / m.PROJECT / "private.jks").exists())
         self.assertFalse((self.sandbox / m.PROJECT / "sample.aab").exists())
+
+    def test_unrelated_asset_and_jks_with_unusual_extension_not_copied(self):
+        (self.project / "Content/Maps").mkdir(parents=True, exist_ok=True)
+        (self.project / "Content/Maps/PrivateArchive.bin").write_bytes(b"not-for-sandbox")
+        (self.project / "Config/SigningProperties.txt").write_text("fake_password")
+        self.prepare()
+        dest = self.sandbox / m.PROJECT
+        self.assertFalse((dest / "Content/Maps/PrivateArchive.bin").exists())
+        self.assertFalse((dest / "Config/SigningProperties.txt").exists())
+
+    def test_symlink_to_external_credentials_blocks_before_copy(self):
+        external = self.root / "outside_backup"
+        external.mkdir()
+        (external / "key.properties").write_text("synthetic_private_secret")
+        (self.project / "Content/ExternalKeys").symlink_to(external, target_is_directory=True)
+        with patch.object(m, "BAD_OID", self.oid):
+            status, code = m.prepare(self.repo, self.sandbox)
+        self.assertEqual((status, code), ("BLOCKED_SYMLINK_IN_SOURCE_PROJECT", 2))
+        self.assertFalse(self.sandbox.exists())
+
+    def test_signing_key_in_default_engine_ini_blocks_before_copy(self):
+        p = self.project / m.CONFIG
+        p.write_text(p.read_text() + "  KeyStorePassword = FAKE_VALUE_NOT_A_SECRET\n")
+        with patch.object(m, "BAD_OID", self.oid):
+            status, code = m.prepare(self.repo, self.sandbox)
+        self.assertEqual((status, code), ("BLOCKED_SIGNING_OR_SECRET_CONFIG_KEY", 2))
+        self.assertFalse(self.sandbox.exists())
+
+    def test_secret_key_in_default_game_ini_also_blocks_copy(self):
+        p = self.project / "Config/DefaultGame.ini"
+        p.write_text("[Section]\nMyClientSecret=SYNTHETIC_ONLY\n")
+        with patch.object(m, "BAD_OID", self.oid):
+            status, code = m.prepare(self.repo, self.sandbox)
+        self.assertEqual((status, code), ("BLOCKED_SIGNING_OR_SECRET_CONFIG_KEY", 2))
+        self.assertFalse(self.sandbox.exists())
+
+    def test_unexpected_source_binary_blocks_before_copy(self):
+        p = self.project / "Source/LastFrontier/native_keystore.bin"
+        p.write_bytes(b"fixture")
+        with patch.object(m, "BAD_OID", self.oid):
+            status, code = m.prepare(self.repo, self.sandbox)
+        self.assertEqual((status, code), ("BLOCKED_NON_CODE_SOURCE_ARTIFACT", 2))
+        self.assertFalse(self.sandbox.exists())
 
     def test_map_generation_python_script_parses_without_engine(self):
         import ast
