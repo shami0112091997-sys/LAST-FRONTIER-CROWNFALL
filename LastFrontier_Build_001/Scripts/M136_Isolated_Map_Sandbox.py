@@ -23,10 +23,61 @@ DESCRIPTOR = Path("LastFrontier.uproject")
 CONFIG = Path("Config/DefaultEngine.ini")
 BAD_OID = "965b78fc071c21412f966b70712eb30724799c20"
 MAGIC = bytes.fromhex("c1832a9e")
-IGNORE = shutil.ignore_patterns(
-    "Saved", "Intermediate", "Binaries", "DerivedDataCache", "__pycache__",
-    ".git", "*.jks", "*.keystore", "*.aab", "*.apk", "*.pem", "*.p12",
+# M137: only compile-time C++ files and known non-secret configs are
+# necessary for the minimal M60 recovery. Never recursively copy a VM project:
+# doing so can follow symlinks into credentials or leak JKS under other names.
+SAFE_SOURCE_SUFFIXES = {".cpp", ".h", ".cs", ".inl", ".ush", ".usf"}
+SAFE_CONFIG_NAMES = {
+    "DefaultEngine.ini", "DefaultGame.ini", "DefaultInput.ini",
+    "DefaultScalability.ini", "DefaultDeviceProfiles.ini",
+}
+SENSITIVE_INI_KEY = re.compile(
+    r"(?im)^\\s*[^;#\\s=]*"
+    r"(?:password|keystore|keyalias|privatekey|clientsecret|accesskey|auth[_-]?token)"
+    r"[^=\\n]*=",
 )
+
+
+def validate_minimal_source(project: Path) -> str | None:
+    if not project.is_dir() or project.is_symlink():
+        return "BLOCKED_UNSAFE_PROJECT_DIRECTORY"
+    source = project / "Source"
+    if not source.is_dir() or source.is_symlink():
+        return "BLOCKED_MISSING_SOURCE_DIRECTORY"
+    for p in project.rglob("*"):
+        if p.is_symlink():
+            return "BLOCKED_SYMLINK_IN_SOURCE_PROJECT"
+    source_files = [p for p in source.rglob("*") if p.is_file()]
+    if not source_files or any(p.suffix.lower() not in SAFE_SOURCE_SUFFIXES for p in source_files):
+        return "BLOCKED_NON_CODE_SOURCE_ARTIFACT"
+    cfg = project / CONFIG
+    try:
+        ini = cfg.read_text(encoding="utf-8-sig")
+    except (OSError, UnicodeError):
+        return "BLOCKED_DEFAULTENGINE_UNREADABLE"
+    if SENSITIVE_INI_KEY.search(ini):
+        return "BLOCKED_SIGNING_OR_SECRET_CONFIG_KEY"
+    return None
+
+
+def copy_minimal_source(project: Path, dest: Path) -> None:
+    """Only copy explicit project inputs needed for the first-playable map."""
+    dest.mkdir(parents=True, exist_ok=False)
+    shutil.copy2(project / DESCRIPTOR, dest / DESCRIPTOR)
+    shutil.copytree(project / "Source", dest / "Source", symlinks=True)
+    (dest / "Config").mkdir()
+    for name in SAFE_CONFIG_NAMES:
+        cfg = project / "Config" / name
+        if cfg.is_file():
+            shutil.copy2(cfg, dest / "Config" / name)
+    source_map = project / MAP
+    (dest / MAP.parent).mkdir(parents=True)
+    shutil.copy2(source_map, dest / MAP)
+    script = project / "Scripts/M136_Create_TestMap_In_Unreal.py"
+    if not script.is_file():
+        raise ValueError("EDITOR_SCRIPT_MISSING")
+    (dest / "Scripts").mkdir()
+    shutil.copy2(script, dest / "Scripts" / script.name)
 
 
 def safe_file(path: Path, max_size: int = 256_000_000) -> bool:
@@ -69,10 +120,15 @@ def prepare(repo: Path, sandbox: Path) -> tuple[str, int]:
     src = repo / PROJECT
     if not (src / DESCRIPTOR).is_file() or not (src / CONFIG).is_file():
         return "BLOCKED_INCOMPLETE_UNREAL_PROJECT", 2
+    issue = validate_minimal_source(src)
+    if issue:
+        return issue, 2
 
-    # Copy to a *new* workspace, never alter repo/Content/Maps or a Cloud VM.
+    # Copy ONLY explicitly permitted inputs to a new workspace.
+    # No unrelated Content, secrets, binaries, generated assets or symlinks.
     try:
-        shutil.copytree(src, sandbox / PROJECT, ignore=IGNORE)
+        sandbox.mkdir(parents=True, exist_ok=False)
+        copy_minimal_source(src, sandbox / PROJECT)
         dst = sandbox / PROJECT
         quarantine = sandbox / "M136_Quarantine"
         quarantine.mkdir(parents=True, exist_ok=True)
