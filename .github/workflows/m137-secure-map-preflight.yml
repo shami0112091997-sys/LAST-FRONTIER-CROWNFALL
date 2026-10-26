@@ -88,6 +88,23 @@ jobs:
           test ! -e "$sandbox"
           echo 'M137_ENGINE_MISSING_NO_DOWNLOAD_OR_SANDBOX_MODIFICATION=PASS'
 
+      - name: Refuse any sandbox path inside the Unreal installation
+        shell: bash
+        run: |
+          set -euo pipefail
+          engine="$RUNNER_TEMP/m137-sandbox-guard-engine"
+          mkdir -p "$engine"
+          sandbox="$engine/DO_NOT_CREATE_HERE"
+          code=0
+          bash LastFrontier_Build_001/Scripts/M137_Run_UE58_Map_ExistingEngine_Only.sh \
+            "$GITHUB_WORKSPACE" "$engine" "$sandbox" \
+            > "$RUNNER_TEMP/m137-engine-path-check.txt" 2>&1 || code=$?
+          test "$code" -eq 2
+          grep -Fqx 'M137_STATUS=BLOCKED_SANDBOX_COLLIDES_ENGINE_DIRECTORY' \
+            "$RUNNER_TEMP/m137-engine-path-check.txt"
+          test ! -e "$sandbox"
+          echo 'M137_UNREAL_INSTALLATION_PROTECTED=PASS'
+
       - name: Read-only historic map failure guard
         shell: bash
         run: |
