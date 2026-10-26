@@ -53,4 +53,8 @@ void ALFGameMode::EnsurePlayablePawn()
         PC->Possess(Pawn);
         UE_LOG(LogTemp, Display, TEXT("CROWNFALL_M60_PLAYER=READY"));
     }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("CROWNFALL_BOOT_PLAYER_SPAWN_FAILED"));
+    }
 }
