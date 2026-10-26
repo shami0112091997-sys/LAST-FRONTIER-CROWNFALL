@@ -31,6 +31,12 @@
   - `M137_ENGINE_MISSING_NO_DOWNLOAD_OR_SANDBOX_MODIFICATION=PASS`
   - `M137_HISTORIC_BAD_MAP_BLOCK=PASS`
 
+### تدقيق أمان إضافي بعد أول نجاح
+
+- تم سدّ احتمال اختيار Sandbox داخل مجلد Unreal Engine المثبّت أو فوقه؛ يتوقف المشغّل برسالة `M137_STATUS=BLOCKED_SANDBOX_COLLIDES_ENGINE_DIRECTORY` قبل أي نسخ.
+- أُضيف اختبار حقيقي على GitHub Actions يجرب مسار Sandbox غير آمن ويؤكد `M137_UNREAL_INSTALLATION_PROTECTED=PASS` وعدم إنشاء المجلد.
+- **آخر تشغيل بعد هذا التعديل:** [40283178328](https://github.com/shami0112091997-sys/LAST-FRONTIER-CROWNFALL/actions/runs/40283178328) — **SUCCESS، 53/53 اختبارًا، وجميع الحواجز الجديدة ناجحة**. لم يتم تنزيل Unreal أو تشغيله.
+
 ## ما لم يتم ويمنع إصدار APK/AAB
 
 - لا يوجد Unreal Engine 5.8 مثبّت داخل هذه الجلسة، ولا وصول موصل إلى خادم Google Cloud القائم الذي يحمل M84/M106؛ لذلك **لم يحدث UE Editor load فعلي أو Compile أو Cook أو Package**.
