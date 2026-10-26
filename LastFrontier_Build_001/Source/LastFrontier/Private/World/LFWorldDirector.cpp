@@ -281,9 +281,10 @@ void ALFWorldDirector::SpawnEnemies()
     }
 
     UE_LOG(LogTemp, Display, TEXT("CROWNFALL_ENEMIES_SPAWNED=%d"), SpawnedEnemies);
-    if (SpawnedEnemies != UE_ARRAY_COUNT(EnemySpawns))
+    const int32 ExpectedEnemies = static_cast<int32>(UE_ARRAY_COUNT(EnemySpawns));
+    if (SpawnedEnemies != ExpectedEnemies)
     {
         UE_LOG(LogTemp, Error, TEXT("CROWNFALL_ENEMY_SPAWN_INCOMPLETE=%d_OF_%d"),
-            SpawnedEnemies, static_cast<int32>(UE_ARRAY_COUNT(EnemySpawns)));
+            SpawnedEnemies, ExpectedEnemies);
     }
 }
