@@ -33,6 +33,11 @@ ALFWorldDirector::ALFWorldDirector()
 void ALFWorldDirector::BeginPlay()
 {
     Super::BeginPlay();
+    UE_LOG(LogTemp, Display, TEXT("CROWNFALL_BOOT_WORLD_DIRECTOR_BEGINPLAY=M135"));
+    if (!CubeMesh.Get() || !CylinderMesh.Get() || !ConeMesh.Get() || !SphereMesh.Get())
+    {
+        UE_LOG(LogTemp, Error, TEXT("CROWNFALL_BOOT_BASIC_SHAPES_MISSING"));
+    }
 
     // Create the walkable ground immediately; defer the rest only on Android.
     // Each subsequent stage runs on another frame to avoid a single large
@@ -80,7 +85,7 @@ void ALFWorldDirector::BuildNextStage()
     else
     {
         UE_LOG(LogTemp, Display, TEXT("CROWNFALL_WORLD_READY_ALL_STAGES"));
-    UE_LOG(LogTemp, Display, TEXT("CROWNFALL_M60_WORLD=READY"));
+        UE_LOG(LogTemp, Display, TEXT("CROWNFALL_M60_WORLD=READY"));
     }
 }
 
@@ -249,8 +254,10 @@ void ALFWorldDirector::BuildLighting()
 
 void ALFWorldDirector::SpawnEnemies()
 {
-    if (!GetWorld())
+    UWorld* World = GetWorld();
+    if (!World)
     {
+        UE_LOG(LogTemp, Error, TEXT("CROWNFALL_ENEMY_SPAWN_WORLD_MISSING"));
         return;
     }
 
@@ -264,8 +271,19 @@ void ALFWorldDirector::SpawnEnemies()
         FVector(1900.0, 1450.0, 140.0)
     };
 
+    int32 SpawnedEnemies = 0;
     for (const FVector& Location : EnemySpawns)
     {
-        GetWorld()->SpawnActor<ALFEnemy>(ALFEnemy::StaticClass(), Location, FRotator::ZeroRotator);
+        if (World->SpawnActor<ALFEnemy>(ALFEnemy::StaticClass(), Location, FRotator::ZeroRotator))
+        {
+            ++SpawnedEnemies;
+        }
+    }
+
+    UE_LOG(LogTemp, Display, TEXT("CROWNFALL_ENEMIES_SPAWNED=%d"), SpawnedEnemies);
+    if (SpawnedEnemies != UE_ARRAY_COUNT(EnemySpawns))
+    {
+        UE_LOG(LogTemp, Error, TEXT("CROWNFALL_ENEMY_SPAWN_INCOMPLETE=%d_OF_%d"),
+            SpawnedEnemies, static_cast<int32>(UE_ARRAY_COUNT(EnemySpawns)));
     }
 }
