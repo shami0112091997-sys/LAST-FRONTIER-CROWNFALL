@@ -1,0 +1,91 @@
+name: M135 CROWNFALL known-bad map safety and startup observability
+
+on:
+  push:
+    branches:
+      - m135-boot-observability-gates
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m135-source-safety
+  cancel-in-progress: true
+
+jobs:
+  m135-source-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONNOUSERSITE: "1"
+    steps:
+      - name: Checkout source without persisting GitHub token
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Check Python syntax, C++ test markers and 29 synthetic tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import ast
+          root = Path("LastFrontier_Build_001/Scripts")
+          paths = sorted(root.glob("M135_*.py")) + sorted(root.glob("test_M13*.py"))
+          for path in paths:
+              ast.parse(path.read_text(encoding="utf-8-sig"), filename=str(path))
+          print(f"M135_PYTHON_SYNTAX_FILES={len(paths)}")
+          PY
+          python3 -m unittest discover \
+            -s LastFrontier_Build_001/Scripts -p 'test_M13*.py' -v
+
+      - name: Require release gate to block exact previously failed TestMap
+        shell: bash
+        run: |
+          set -euo pipefail
+          if output=$(python3 LastFrontier_Build_001/Scripts/M135_KnownBadMap_ReleaseBlock_ReadOnly.py \
+              --map LastFrontier_Build_001/Content/Maps/TestMap.umap); then
+            echo 'M135_ERROR=BAD_GITHUB_MAP_WRONGLY_CLEARED'
+            exit 1
+          else
+            code=$?
+          fi
+          printf '%s\n' "$output"
+          test "$code" -eq 2
+          printf '%s\n' "$output" | grep -Fqx 'M135_MAP_STATUS=BLOCKED_HISTORIC_UE_COOK_FAILURE'
+          echo 'M135_RELEASE_MAP_BLOCKER=WORKING_AS_DESIGNED'
+
+      - name: Verify legacy tests, source integrity and Bash syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          folder=LastFrontier_Build_001/Scripts
+          for file in test_M121_local.py test_M122_local.py \
+                      test_M123_exit_triage_local.py test_M124_local.py \
+                      test_M125_local.py test_M126_synthetic_dex.py \
+                      test_M127_critical_regressions.py; do
+            python3 "$folder/$file"
+          done
+          python3 "$folder/M131_Unreal_Repo_Integrity_ReadOnly.py" \
+            --repo . --play-version-code 218 | tee /tmp/m135-source-facts.txt
+          grep -Fqx 'M131_STRUCTURAL_ERRORS=0' /tmp/m135-source-facts.txt
+          bash -n "$folder/M68_Staged_Android_Build.sh"
+          bash -n "$folder/M106_Prepare_Distribution_Sandbox.sh"
+          echo 'M135_HISTORICAL_SYNTHETIC_AND_BASH=PASS'
+
+      - name: Explicit scope summary
+        if: always()
+        run: |
+          {
+            echo '## M135 — read-only build blocker & source boot telemetry'
+            echo ''
+            echo 'Known failed M60 TestMap is deliberately blocked, rather than'
+            echo 'being represented as a successful UE cook or release readiness.'
+            echo ''
+            echo 'No UE source compile, Android cook, actual M106 AAB, GCP VM,'
+            echo 'JKS, personal device, or Google Play upload was accessed.'
+            echo 'Source diagnostics are not a runtime crash diagnosis.'
+          } >> "$GITHUB_STEP_SUMMARY"
