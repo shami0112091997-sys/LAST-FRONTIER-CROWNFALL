@@ -19,6 +19,8 @@ SANDBOX="$(realpath -m -- "$3")"
 [[ ! -e "$SANDBOX" ]] || fail SANDBOX_ALREADY_EXISTS
 [[ "$SANDBOX" != "$REPO" && "$SANDBOX"/ != "$REPO"/* && "$REPO"/ != "$SANDBOX"/* ]] ||
   fail SANDBOX_NOT_ISOLATED
+[[ "$SANDBOX" != "$UE_ROOT" && "$SANDBOX"/ != "$UE_ROOT"/* && "$UE_ROOT"/ != "$SANDBOX"/* ]] ||
+  fail SANDBOX_COLLIDES_ENGINE_DIRECTORY
 [[ -f "$REPO/LastFrontier_Build_001/LastFrontier.uproject" ]] || fail PROJECT_NOT_FOUND
 
 EDITOR="$UE_ROOT/Engine/Binaries/Linux/UnrealEditor"
