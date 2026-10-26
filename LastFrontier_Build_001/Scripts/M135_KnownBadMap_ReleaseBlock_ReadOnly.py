@@ -38,6 +38,8 @@ def inspect_map(path: Path) -> tuple[str, int]:
         if digest.hexdigest() == KNOWN_FAILED_UE_COOK_MAP_OID:
             return "BLOCKED_HISTORIC_UE_COOK_FAILURE", 2
         return "NOT_KNOWN_BAD_STILL_REQUIRES_UE_LOAD_AND_COOK", 0
+    except FileNotFoundError:
+        return "BLOCKED_MISSING_OR_UNSAFE_MAP", 2
     except OSError:
         return "BLOCKED_MAP_READ_FAILED", 2
 
