@@ -101,7 +101,7 @@ jobs:
             "$RUNNER_TEMP/m135.txt"
           echo 'M137_HISTORIC_BAD_MAP_BLOCK=PASS'
 
-      - name: Explicit summary: source tests are NOT Unreal Android tests
+      - name: Explicit summary of source-only limitations
         if: always()
         shell: bash
         run: |
