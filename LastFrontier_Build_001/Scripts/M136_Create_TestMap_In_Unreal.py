@@ -35,4 +35,8 @@ require(start is not None, "PLAYER_START_SPAWN_FAILED")
 start.set_actor_label("Crownfall_M136_PlayerStart")
 require(level.save_current_level(), "NEW_LEVEL_SAVE_FAILED")
 require(assets.does_asset_exist(LEVEL_PATH), "ASSET_REGISTRY_MISSING_LEVEL")
+# Reload the disk-backed level in the real editor before reporting success.
+# This catches save/load problems earlier than a separate Android Cook.
+require(level.load_level(LEVEL_PATH), "SAVED_LEVEL_RELOAD_FAILED")
+unreal.log("CROWNFALL_M137_UE_TESTMAP_EDITOR_RELOAD=PASS")
 unreal.log("CROWNFALL_M136_UE_LEVEL_GENERATED=PASS")
