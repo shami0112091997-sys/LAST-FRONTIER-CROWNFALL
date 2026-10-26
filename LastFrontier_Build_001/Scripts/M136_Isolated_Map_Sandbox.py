@@ -32,9 +32,9 @@ SAFE_CONFIG_NAMES = {
     "DefaultScalability.ini", "DefaultDeviceProfiles.ini",
 }
 SENSITIVE_INI_KEY = re.compile(
-    r"(?im)^\\s*[^;#\\s=]*"
+    r"(?im)^\s*[^;#\s=]*"
     r"(?:password|keystore|keyalias|privatekey|clientsecret|accesskey|auth[_-]?token)"
-    r"[^=\\n]*=",
+    r"[^=\n]*=",
 )
 
 
