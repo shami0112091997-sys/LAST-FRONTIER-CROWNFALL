@@ -1,0 +1,134 @@
+name: M134 CROWNFALL automatic source checks - no Android build
+
+on:
+  push:
+    branches:
+      - m134-autonomous-diagnostics
+  workflow_dispatch:
+
+# GitHub Actions does not run scheduled workflows from non-default branches.
+# This safety workflow therefore runs automatically on each push to M134,
+# or from the Actions page if independently requested.
+permissions:
+  contents: read
+
+concurrency:
+  group: m134-source-only-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  offline-integrity:
+    name: Offline diagnostics and source safety
+    if: github.ref == 'refs/heads/m134-autonomous-diagnostics'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONNOUSERSITE: "1"
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+    steps:
+      - name: Checkout inspected branch, no persisted token
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Check audit tool syntax and bytecode parsing
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 --version
+          python3 - <<'PY'
+          from pathlib import Path
+          import ast
+          folder = Path("LastFrontier_Build_001/Scripts")
+          files = sorted(folder.glob("M1[12][0-9]*ReadOnly*.py"))
+          files += sorted(folder.glob("M13[13]*.py"))
+          files += sorted(folder.glob("test_M1*.py"))
+          seen = set()
+          for f in files:
+              if f in seen:
+                  continue
+              seen.add(f)
+              ast.parse(f.read_text(encoding="utf-8-sig"), filename=str(f))
+          print(f"M134_PYTHON_AST_FILES={len(seen)}")
+          print("M134_PYTHON_SYNTAX=PASS")
+          PY
+
+      - name: Run modern M131/M133 synthetic regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover \
+            -s LastFrontier_Build_001/Scripts \
+            -p 'test_M13*.py' -v
+
+      - name: Run historical M121 to M127 offline synthetic checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          folder=LastFrontier_Build_001/Scripts
+          for testfile in \
+            test_M121_local.py \
+            test_M122_local.py \
+            test_M123_exit_triage_local.py \
+            test_M124_local.py \
+            test_M125_local.py \
+            test_M126_synthetic_dex.py \
+            test_M127_critical_regressions.py; do
+              echo "::group::M134 synthetic validation $testfile"
+              python3 "$folder/$testfile"
+              echo "::endgroup::"
+          done
+          echo 'M134_HISTORICAL_SYNTHETIC_SCRIPTS=7_PASS'
+
+      - name: Audit tracked Unreal project and release safety
+        shell: bash
+        run: |
+          set -euo pipefail
+          folder=LastFrontier_Build_001/Scripts
+          python3 "$folder/M131_Unreal_Repo_Integrity_ReadOnly.py" \
+            --repo . --play-version-code 218 | tee m134-source-facts.txt
+          grep -Fqx 'M131_STRUCTURAL_ERRORS=0' m134-source-facts.txt
+          # Known historic map cook issue is NOT a pass; record as blocking
+          # release provenance pending matching the trusted M84/M106 VM map.
+          grep -Fqx 'M131_TESTMAP_HISTORIC_COOK_FAILURE=REVIEW' m134-source-facts.txt
+          echo 'M134_GITHUB_TESTMAP=HISTORIC_COOK_FAILURE_REQUIRES_VM_VALIDATION'
+          echo 'M134_ANDROID_218_ROOT_CAUSE=UNCONFIRMED'
+
+      - name: Parse shell release-gate syntax without executing
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in \
+            LastFrontier_Build_001/Scripts/M68_Staged_Android_Build.sh \
+            LastFrontier_Build_001/Scripts/M106_Prepare_Distribution_Sandbox.sh \
+            LastFrontier_Build_001/Scripts/M133_VM_OnePaste_ReadOnly.sh; do
+              bash -n "$f"
+          done
+          echo 'M134_BASH_PARSE=PASS'
+
+      - name: Publish truthful safety summary
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo '# M134 — automated source-only safety'
+            echo ''
+            echo 'This run does NOT compile Unreal, cook maps, touch Google Cloud VM,'
+            echo 'inspect the real Play v218 AAB, launch Android, or publish a release.'
+            echo ''
+            echo '- The GitHub TestMap historically failed an actual Unreal cook.'
+            echo '- The real M84/M106 binary map is not available in this repository.'
+            echo '- Only passing test steps above establish their own scoped result.'
+            echo '- The v218 startup crash root cause remains unverified.'
+            echo '- Main / M66 / M128 and all signing keys remain untouched.'
+          } >> "$GITHUB_STEP_SUMMARY"
+          printf '%s\n' \
+            'M134_SOURCE_ONLY=YES' \
+            'M134_UNREAL_BUILD_COOK=NOT_RUN' \
+            'M134_ANDROID_LAUNCH=NOT_RUN' \
+            'M134_PLAY_UPLOAD=NOT_RUN' \
+            'M134_GCP_VM=NOT_ACCESSED' \
+            'M134_CRASH_ROOT_CAUSE=UNKNOWN'
