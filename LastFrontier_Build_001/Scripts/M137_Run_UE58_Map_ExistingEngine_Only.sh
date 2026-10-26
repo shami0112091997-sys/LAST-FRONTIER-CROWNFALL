@@ -37,7 +37,7 @@ assert v.get("MajorVersion") == 5 and v.get("MinorVersion") == 8, "Only Unreal 5
 print("M137_ENGINE_VERSION=5.8_EXISTING")
 PY
 
-if [[ -z "${_DISPLAY:-}" ]] && ! command -v xvfb-run >/dev/null; then
+if [[ -z "${DISPLAY:-}" ]] && ! command -v xvfb-run >/dev/null; then
   fail NO_DISPLAY_OR_XVFB
 fi
 
@@ -56,13 +56,13 @@ cmd=(
   "$EDITOR" "$PROJECT" "-ExecutePythonScript=$GENERATE"
   -unattended -nop4 -nosplash -nullrhi -log
 )
-if [[ -z "${_DISPLAY:-}" ]]; then
-  cmd=(xvfb-run -a "${_cmd[@]}")
+if [[ -z "${DISPLAY:-}" ]]; then
+  cmd=(xvfb-run -a "${cmd[@]}")
 fi
 echo 'M137_EXISTING_UE_EDITOR_INVOCATION=STARTING'
 set +e
-timeout --signal=TERM --kill-after=20s 900 "${_cmd[@]}" 2>&1 | tee "$LOG"
-rc=${_PIPESTATUS[0]}
+timeout --signal=TERM --kill-after=20s 900 "${cmd[@]}" 2>&1 | tee "$LOG"
+rc=${PIPESTATUS[0]}
 set -e
 if (( rc != 0 )); then
   printf 'M137_EXISTING_UE_EDITOR_EXIT_CODE=%s\n' "$rc" >&2
