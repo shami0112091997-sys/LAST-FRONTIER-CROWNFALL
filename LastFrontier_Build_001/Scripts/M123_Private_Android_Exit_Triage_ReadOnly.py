@@ -24,15 +24,22 @@ PATTERNS = {
     "PLANNED_EXIT": r"finishAndRemoveTask|finish\(\)|Force finishing activity|REASON_USER_REQUESTED",
 }
 COMPILED = {k: re.compile(v, re.I) for k,v in PATTERNS.items()}
-START_PID = re.compile(r"\bStart proc\s+(\d+)\s*:\s*com\.crownfall\.stronghold\b", re.I)
-JAVA_PID = re.compile(r"\bProcess:\s*com\.crownfall\.stronghold,\s*PID:\s*(\d+)", re.I)
+# A word boundary also matches before a dot; reject sibling packages such as
+# com.crownfall.stronghold.other while allowing Android's named subprocesses.
+PROCESS_NAME = re.escape(PACKAGE) + r"(?::[A-Za-z0-9_][A-Za-z0-9_.-]*)?"
+PACKAGE_CONTEXT = re.compile(
+    r"(?<![A-Za-z0-9_.:-])" + PROCESS_NAME + r"(?![A-Za-z0-9_.:-])")
+START_PID = re.compile(
+    r"\bStart proc\s+(\d+)\s*:\s*" + PROCESS_NAME + r"(?=/|\s|$)", re.I)
+JAVA_PID = re.compile(
+    r"\bProcess:\s*" + PROCESS_NAME + r",\s*PID:\s*(\d+)", re.I)
 LOGCAT_PID = re.compile(r"^\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\.\d+\s+(\d+)\s+\d+\s+", re.I)
 
 def triage(text):
     lines = text.splitlines()
     pids = {m.group(1) for line in lines for rx in (START_PID,JAVA_PID)
             if (m:=rx.search(line))}
-    package_lines = {i for i,line in enumerate(lines) if PACKAGE in line}
+    package_lines = {i for i,line in enumerate(lines) if PACKAGE_CONTEXT.search(line)}
     if not package_lines and not pids:
         return "NO_PACKAGE_EVIDENCE", {key:0 for key in COMPILED}, 0
     # Keep nearby stack/cause context, or lines tagged with a known package PID.
