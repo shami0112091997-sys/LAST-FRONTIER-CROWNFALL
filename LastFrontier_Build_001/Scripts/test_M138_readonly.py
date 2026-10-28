@@ -38,9 +38,9 @@ class EvidenceTests(unittest.TestCase):
         # unrelated app crashes. Without our own PID, this is not our crash.
         status, hits, selected = triage(
             "10-28 04:00:00.000 900 900 I ActivityManager: "
-            "Force finishing activity com.crownfall.stronghold/.GameActivity\\n"
+            "Force finishing activity com.crownfall.stronghold/.GameActivity\n"
             "10-28 04:00:00.001 777 777 E AndroidRuntime: "
-            "FATAL EXCEPTION: unrelated app\\n"
+            "FATAL EXCEPTION: unrelated app\n"
         )
         self.assertEqual(status, "PACKAGE_CONTEXT_ONLY")
         self.assertEqual(hits["JAVA_EXCEPTION"], 0)
@@ -49,7 +49,7 @@ class EvidenceTests(unittest.TestCase):
     def test_context_only_package_owned_line_is_still_counted(self):
         status, hits, selected = triage(
             "10-28 04:00:00.000 900 900 E AndroidRuntime: "
-            "FATAL EXCEPTION com.crownfall.stronghold\\n"
+            "FATAL EXCEPTION com.crownfall.stronghold\n"
         )
         self.assertEqual(status, "PACKAGE_CONTEXT_ONLY")
         self.assertEqual(hits["JAVA_EXCEPTION"], 1)
