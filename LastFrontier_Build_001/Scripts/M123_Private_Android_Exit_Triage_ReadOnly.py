@@ -50,7 +50,10 @@ def triage(text):
     for i,line in enumerate(lines):
         m=LOGCAT_PID.match(line)
         if m:
-            if (m.group(1) in pids) or (not pids and i in near_package):
+            # Without a verified package PID, a nearby log line from another
+            # process is not evidence of a CROWNFALL crash. Only accept a
+            # PID-tagged line if that line names the exact package itself.
+            if (m.group(1) in pids) or (not pids and i in package_lines):
                 relevant.add(i)
         elif i in near_package:
             # Java stack continuations may lack logcat PID prefixes.
