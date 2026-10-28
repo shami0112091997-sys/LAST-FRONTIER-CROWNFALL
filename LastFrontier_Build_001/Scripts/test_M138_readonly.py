@@ -33,6 +33,28 @@ class EvidenceTests(unittest.TestCase):
         self.assertEqual(hits["JAVA_EXCEPTION"], 1)
         self.assertEqual(selected, 2)
 
+    def test_context_only_does_not_attrib_unrelated_pid_crash(self):
+        # ActivityManager can mention our package immediately before an
+        # unrelated app crashes. Without our own PID, this is not our crash.
+        status, hits, selected = triage(
+            "10-28 04:00:00.000 900 900 I ActivityManager: "
+            "Force finishing activity com.crownfall.stronghold/.GameActivity\\n"
+            "10-28 04:00:00.001 777 777 E AndroidRuntime: "
+            "FATAL EXCEPTION: unrelated app\\n"
+        )
+        self.assertEqual(status, "PACKAGE_CONTEXT_ONLY")
+        self.assertEqual(hits["JAVA_EXCEPTION"], 0)
+        self.assertEqual(selected, 1)
+
+    def test_context_only_package_owned_line_is_still_counted(self):
+        status, hits, selected = triage(
+            "10-28 04:00:00.000 900 900 E AndroidRuntime: "
+            "FATAL EXCEPTION com.crownfall.stronghold\\n"
+        )
+        self.assertEqual(status, "PACKAGE_CONTEXT_ONLY")
+        self.assertEqual(hits["JAVA_EXCEPTION"], 1)
+        self.assertEqual(selected, 1)
+
     def test_single_device(self):
         self.assertEqual(m138.select_authorized_device("List of devices attached\nTESTER device\n"), "TESTER")
         self.assertIsNone(m138.select_authorized_device("List of devices attached\nTESTER device\nOTHER device\n"))
